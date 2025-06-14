@@ -399,7 +399,7 @@ class Parser {
       }
 
       consume(RIGHT_BRACKET, "Expect ']' after array elements.");
-      return new Expr.Array(elements);
+      return new Expr.ArrayLiteral(elements);
     }
 
     throw error(peek(), "Expect expression.");

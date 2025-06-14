@@ -4,7 +4,7 @@ import java.util.List;
 
 abstract class Expr {
   interface Visitor<R> {
-    R visitArrayExpr(Array expr);
+    R visitArrayExpr(ArrayLiteral expr);
     R visitArrayAssignExpr(ArrayAssign expr);
     R visitArrayIndexExpr(ArrayIndex expr);
     R visitAssignExpr(Assign expr);
@@ -22,8 +22,8 @@ abstract class Expr {
     R visitVariableExpr(Variable expr);
   }
 
-  static class Array extends Expr {
-    Array(List<Expr> elements) {
+  static class ArrayLiteral extends Expr {
+    ArrayLiteral(List<Expr> elements) {
       this.elements = elements;
     }
 

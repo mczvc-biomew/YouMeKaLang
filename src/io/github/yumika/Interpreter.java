@@ -189,7 +189,7 @@ class Interpreter implements
   }
 
   @Override
-  public Object visitArrayExpr(Expr.Array expr) {
+  public Object visitArrayExpr(Expr.ArrayLiteral expr) {
     List<Object> elements = new ArrayList<>();
     for (Expr element: expr.elements) {
       elements.add(evaluate(element));
