@@ -243,6 +243,18 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
+    System.out.println("ObjectLiteralExpr: ");
+    System.out.println(((Expr.ObjectLiteral)expr).properties);
+    Map<String, Expr> values = ((Expr.ObjectLiteral)expr).properties;
+    for (Map.Entry<String, Expr> entry : values.entrySet()) {
+      resolve(entry.getValue());
+    }
+
+    return null;
+  }
+
+  @Override
   public Void visitSetExpr(Expr.Set expr) {
     resolve(expr.value);
     resolve(expr.object);
