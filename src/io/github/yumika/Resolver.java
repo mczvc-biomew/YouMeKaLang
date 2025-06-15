@@ -201,6 +201,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitBlockExpr(Expr.Block expr) {
+    resolve(expr.statements);
+    return null;
+  }
+
+  @Override
   public Void visitCallExpr(Expr.Call expr) {
     resolve(expr.callee);
 
@@ -220,6 +226,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   @Override
   public Void visitGroupingExpr(Expr.Grouping expr) {
     resolve(expr.expression);
+    return null;
+  }
+
+  @Override
+  public Void visitLambdaExpr(Expr.Lambda expr) {
+    resolve(expr.body);
     return null;
   }
 
