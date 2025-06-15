@@ -112,6 +112,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitBlockExpr(Expr.Block expr) {
+    return parenthesize2("||", expr.statements);
+  }
+
+  @Override
   public String visitCallExpr(Expr.Call expr) { return parenthesize2("call", expr.callee, expr.arguments); }
 
   @Override
@@ -119,6 +124,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
   @Override
   public String visitGroupingExpr(Expr.Grouping expr) { return parenthesize("group", expr.expression); }
+
+  @Override
+  public String visitLambdaExpr(Expr.Lambda expr) {
+    return parenthesize2("lambda", expr.body, expr.params);
+  }
 
   @Override
   public String visitListComprehensionExpr(Expr.ListComprehension expr) {
