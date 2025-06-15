@@ -10,9 +10,11 @@ abstract class Expr {
     R visitArrayIndexExpr(ArrayIndex expr);
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
+    R visitBlockExpr(Block expr);
     R visitCallExpr(Call expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
+    R visitLambdaExpr(Lambda expr);
     R visitListComprehensionExpr(ListComprehension expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
@@ -98,6 +100,17 @@ abstract class Expr {
     final Expr right;
   }
 
+  static class Block extends Expr {
+    Block(List<Stmt> statements) {
+      this.statements = statements;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitBlockExpr(this); }
+
+    final List<Stmt> statements;
+  }
+
   static class Call extends Expr {
     Call(Expr callee, Token paren, List<Expr> arguments) {
       this.callee = callee;
@@ -133,6 +146,19 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitGroupingExpr(this); }
 
     final Expr expression;
+  }
+
+  static class Lambda extends Expr {
+    Lambda(List<Token> params, Expr body) {
+      this.params = params;
+      this.body = body;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitLambdaExpr(this); }
+
+    final List<Token> params;
+    final Expr body;
   }
 
   static class ListComprehension extends Expr {
