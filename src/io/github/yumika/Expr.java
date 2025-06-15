@@ -1,6 +1,7 @@
 package io.github.yumika;
 
 import java.util.List;
+import java.util.Map;
 
 abstract class Expr {
   interface Visitor<R> {
@@ -15,6 +16,7 @@ abstract class Expr {
     R visitListComprehensionExpr(ListComprehension expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
+    R visitObjectLiteralExpr(ObjectLiteral expr);
     R visitSetExpr(Set expr);
     R visitSuperExpr(Super expr);
     R visitThisExpr(This expr);
@@ -172,6 +174,17 @@ abstract class Expr {
     final Expr left;
     final Token operator;
     final Expr right;
+  }
+
+  static class ObjectLiteral extends Expr {
+    ObjectLiteral(Map<String, Expr> properties) {
+      this.properties = properties;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitObjectLiteralExpr(this); }
+
+    final Map<String, Expr> properties;
   }
 
   static class Set extends Expr {
