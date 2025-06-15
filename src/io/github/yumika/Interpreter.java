@@ -486,7 +486,12 @@ class Interpreter implements
     if (distance != null) {
       return environment.getAt(distance, name.lexeme);
     } else {
-      return globals.get(name);
+      try {
+        return globals.get(name);
+      } catch (RuntimeError.UndefinedException undefEx) {
+        throw new RuntimeError.ReferenceError(name,
+            "Uncaught ReferenceError: " + name.lexeme + " is not defined");
+      }
     }
   }
 
