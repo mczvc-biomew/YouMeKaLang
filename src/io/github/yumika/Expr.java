@@ -12,6 +12,7 @@ abstract class Expr {
     R visitCallExpr(Call expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
+    R visitListComprehensionExpr(ListComprehension expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
     R visitSetExpr(Set expr);
@@ -130,6 +131,24 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitGroupingExpr(this); }
 
     final Expr expression;
+  }
+
+  static class ListComprehension extends Expr {
+
+    ListComprehension(Expr elementExpr, Token variable, Expr iterable, Expr condition) {
+      this.elementExpr = elementExpr;
+      this.variable = variable;
+      this.iterable = iterable;
+      this.condition = condition;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitListComprehensionExpr(this); }
+
+    final Expr elementExpr;
+    final Token variable;
+    final Expr iterable;
+    final Expr condition;
   }
 
   static class Literal extends Expr {
