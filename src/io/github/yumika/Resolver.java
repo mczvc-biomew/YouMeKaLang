@@ -224,6 +224,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitListComprehensionExpr(Expr.ListComprehension expr) {
+    resolve(expr.iterable);
+    if (expr.condition != null)
+      resolve(expr.condition);
+    resolve(expr.elementExpr);
+    return null;
+  }
+
+  @Override
   public Void visitLiteralExpr(Expr.Literal expr) { return null; }
 
   @Override
