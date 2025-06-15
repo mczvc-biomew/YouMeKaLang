@@ -69,7 +69,7 @@ class Interpreter implements
       return true;
     }
     if (expr instanceof Expr.Binary) {
-      if (resolveLogical(((Expr.Binary)expr).left, 0) || resolveLogical(((Expr.Binary)expr).right, 0))
+      if (resolveLogical(((Expr.Binary)expr).left, 0) && resolveLogical(((Expr.Binary)expr).right, 0))
         return true;
     } else if (expr instanceof Expr.Unary) {
       return resolveLogical(((Expr.Unary) expr).right, 0);
@@ -87,6 +87,16 @@ class Interpreter implements
       for (Stmt statement : statements) {
         execute(statement);
       }
+    } finally {
+      this.environment = previous;
+    }
+  }
+
+  Object evaluateExpr(Expr expr, Environment environment) {
+    Environment previous = this.environment;
+    try {
+      this.environment = environment;
+      return evaluate(expr);
     } finally {
       this.environment = previous;
     }
@@ -355,6 +365,16 @@ class Interpreter implements
   }
 
   @Override
+  public Object visitBlockExpr(Expr.Block expr) {
+    try {
+      executeBlock(expr.statements, new Environment(environment));
+    } catch (Return value) {
+      return value.value;
+    }
+    return globals.getAt(0, "undefined");
+  }
+
+  @Override
   public Object visitCallExpr(Expr.Call expr) {
     Object callee = evaluate(expr.callee);
 
@@ -393,6 +413,12 @@ class Interpreter implements
 
   @Override
   public Object visitGroupingExpr(Expr.Grouping expr) { return evaluate(expr.expression); }
+
+  @Override
+  public Object visitLambdaExpr(Expr.Lambda expr) {
+    resolveLogical(expr.body, 0);
+    return new YmkLambda(expr, environment);
+  }
 
   @Override
   public Object visitListComprehensionExpr(Expr.ListComprehension expr) {
