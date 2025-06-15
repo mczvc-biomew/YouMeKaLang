@@ -391,15 +391,34 @@ class Parser {
     }
 
     if (match(LEFT_BRACKET)) {
-      List<Expr> elements = new ArrayList<>();
-      if (!check(RIGHT_BRACKET)) {
-        do {
-          elements.add(expression());
-        } while (match(COMMA));
-      }
+      Expr element = expression();
 
-      consume(RIGHT_BRACKET, "Expect ']' after array elements.");
-      return new Expr.ArrayLiteral(elements);
+      if (match(FOR)) {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.");
+        Token variable = consume(IDENTIFIER, "Expect identifier");
+        consume(IN, "Expect 'in'");
+        Expr iterable = expression();
+        consume(RIGHT_PAREN, "Expect ')'");
+        Expr condition = null;
+        if (match(IF)) {
+          condition = expression();
+        }
+        consume(RIGHT_BRACKET, "Expect ']' after list comprehension");
+
+        return new Expr.ListComprehension(element, variable, iterable, condition);
+      } else {
+        List<Expr> elements = new ArrayList<>();
+        if (!check(RIGHT_BRACKET)) {
+          do {
+            element = element != null ? element : expression();
+            elements.add(element);
+            element = null;
+          } while (match(COMMA));
+        }
+
+        consume(RIGHT_BRACKET, "Expect ']' after array elements.");
+        return new Expr.ArrayLiteral(elements);
+      }
     }
 
     throw error(peek(), "Expect expression.");
