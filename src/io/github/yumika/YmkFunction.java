@@ -45,11 +45,11 @@ class YmkFunction implements YmkCallable {
           arguments.get(i));
     }
 
-    if (declaration.varArgsName == null) {
+    if (declaration.hasVarArgs && declaration.varArgsName == null) {
       throw new RuntimeError(null,
           "Must have var args name.");
     }
-    if (declaration.kwArgsName == null) {
+    if (declaration.hasVarKwargs && declaration.kwArgsName == null) {
       throw new RuntimeError(null,
           "Must have kwargs name.");
     }
