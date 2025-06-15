@@ -18,7 +18,7 @@ class Environment {
 
     if (enclosing != null) return enclosing.get(name);
 
-    throw new RuntimeError(name,
+    throw new RuntimeError.UndefinedException(name,
         "Undefined variable '" + name.lexeme + "'.");
   }
 
