@@ -447,7 +447,37 @@ class Parser {
       }
     }
 
+    if (check(PIPE)) {
+      return lambda();
+    }
+
     throw error(peek(), "Expect expression.");
+  }
+
+  private Expr lambda() {
+    List<Token> parameters = new ArrayList<>();
+    // Handle |x| ...
+    if (match(PIPE)) {
+      if (!check(PIPE)) {
+        do {
+          if (parameters.size() >= 255) {
+            error(peek(), "Maximum of 255 parameters.");
+          }
+          parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+        } while (match(COMMA));
+      }
+      consume(PIPE, "Expect '|' after parameters.");
+    } else {
+      throw error(peek(), "Expect lambda parameters.");
+    }
+    Expr body;
+    if (match(LEFT_BRACE)) {
+      List<Stmt> block = block();
+      body = new Expr.Block(block);
+    } else {
+      body = expression();
+    }
+    return new Expr.Lambda(parameters, body);
   }
 
   private Expr objectLiteral() {
