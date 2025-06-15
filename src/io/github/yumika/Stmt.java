@@ -55,6 +55,22 @@ abstract class Stmt {
       this.name = name;
       this.params = params;
       this.body = body;
+      this.hasVarArgs = false;
+      this.hasVarKwargs = false;
+      this.varArgsName = null;
+      this.kwArgsName = null;
+    }
+
+    Function(Token name, List<Token> params, List<Stmt> body,
+             boolean hasVarArgs, boolean hasVarKwargs,
+             Token varArgsName, Token kwArgsName) {
+      this.name = name;
+      this.params = params;
+      this.body = body;
+      this.hasVarArgs = hasVarArgs;
+      this.hasVarKwargs = hasVarKwargs;
+      this.varArgsName = varArgsName;
+      this.kwArgsName = kwArgsName;
     }
 
     @Override
@@ -62,6 +78,10 @@ abstract class Stmt {
 
     final Token name;
     final List<Token> params;
+    final boolean hasVarArgs;
+    final boolean hasVarKwargs;
+    final Token varArgsName;
+    final Token kwArgsName;
     final List<Stmt> body;
   }
 
