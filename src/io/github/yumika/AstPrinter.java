@@ -1,5 +1,6 @@
 package io.github.yumika;
 
+import java.util.Arrays;
 import java.util.List;
 
 class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
@@ -120,6 +121,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   public String visitGroupingExpr(Expr.Grouping expr) { return parenthesize("group", expr.expression); }
 
   @Override
+  public String visitListComprehensionExpr(Expr.ListComprehension expr) {
+    return parenthesize2("[list-comprehension]", expr.elementExpr, expr.iterable, expr.condition);
+  }
+
+  @Override
   public String visitLiteralExpr(Expr.Literal expr) {
     if (expr.value == null) return "null";
     return expr.value.toString();
@@ -201,5 +207,20 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
             new Expr.Literal(45.67)));
 
     System.out.println(new AstPrinter().print(expression));
+
+    List<Expr> elements = Arrays.asList(new Expr.Literal("1"));
+    Expr listComp = new Expr.ListComprehension(
+        new Expr.Variable(
+            new Token(TokenType.VAR, "x", 'x', 1)
+        ),
+        new Token(TokenType.VAR, "x", 'x', 1),
+        new Expr.ArrayLiteral(elements),
+        new Expr.Binary(
+            new Expr.Literal("1"),
+            new Token(TokenType.LESS, "<", "<", 1),
+            new Expr.Literal("2")
+        )
+    );
+    System.out.println(new AstPrinter().print(listComp));
   }
 }
