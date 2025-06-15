@@ -3,8 +3,10 @@ package io.github.yumika;
 enum TokenType {
   // Single-character tokens.
   LEFT_BRACKET, RIGHT_BRACKET,
-  LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
-  COMMA, COLON, DOT, MINUS, PLUS, SEMICOLON, SLASH, STAR,
+  LEFT_PAREN, RIGHT_PAREN,
+  LEFT_BRACE, RIGHT_BRACE,
+  COMMA, COLON, DOT, MINUS, PLUS,
+  PIPE, SEMICOLON, SLASH, STAR,
 
   // One or two character tokens.
   BANG, BANG_EQUAL,
