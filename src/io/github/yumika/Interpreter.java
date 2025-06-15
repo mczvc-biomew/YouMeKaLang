@@ -213,21 +213,35 @@ class Interpreter implements
 
   @Override
   public Object visitArrayAssignExpr(Expr.ArrayAssign expr) {
-    Object array = evaluate(expr.array);
+    Object arrayOrMap = evaluate(expr.array);
     Object index = evaluate(expr.index);
     Object value = evaluate(expr.value);
 
-    if (!(index instanceof Double)) {
-      throw new RuntimeError(expr.name, "Index must be a number.");
+    if (!(arrayOrMap instanceof List) && !(arrayOrMap instanceof Map)) {
+      throw new RuntimeError(null, "Can only index arrays or object literals.");
+    } else if (arrayOrMap instanceof List) {
+      if (!(index instanceof Double)) {
+        throw new RuntimeError(null, "Index must be a number.");
+      }
+    } else if (arrayOrMap instanceof Map) {
+      if (!(index instanceof String)) {
+        throw new RuntimeError(null, "Key must be a valid.");
+      }
     }
-    if (!(value instanceof Double)) {
-      throw new RuntimeError(expr.name, "Value must be a number.");
+    if (!(value instanceof Double || value instanceof String || value instanceof List || value instanceof Map)) {
+      throw new RuntimeError(expr.name, "Value must be a number, string, or array.");
     }
 
-    if (array instanceof List<?>) {
+    if (arrayOrMap instanceof List<?>) {
       int i = ((Double) index).intValue();
-      List<Object> list = (List<Object>) array;
+      List<Object> list = (List<Object>) arrayOrMap;
       list.set(i, value);
+
+      return value;
+    } else if (arrayOrMap instanceof Map<?, ?>) {
+      String key = ((String) index);
+      Map<String, Object> map = (Map<String, Object>) arrayOrMap;
+      map.put(key, value);
 
       return value;
     }
@@ -237,22 +251,39 @@ class Interpreter implements
 
   @Override
   public Object visitArrayIndexExpr(Expr.ArrayIndex expr) {
-    Object array = evaluate(expr.array);
+    Object arrayOrMap = evaluate(expr.array);
     Object index = evaluate(expr.index);
 
-    if (!(array instanceof List)) {
-      throw new RuntimeError(expr.bracket, "Can only index arrays.");
-    }
-    if (!(index instanceof Double)) {
-      throw new RuntimeError(expr.bracket, "Array index must be a number");
-    }
-    List<?> list = (List<?>) array;
-    int i = ((Double) index).intValue();
-    if (i < 0 || i >= list.size()) {
-      throw new RuntimeError(expr.bracket, "Array index out of bounds.");
+    if (!(arrayOrMap instanceof List) && !(arrayOrMap instanceof Map)) {
+      throw new RuntimeError(expr.bracket, "Can only index arrays or objects.");
+    } else if (arrayOrMap instanceof List) {
+      if (!(index instanceof Double)) {
+        throw new RuntimeError(expr.bracket, "Index must be a number.");
+      }
+    } else if (arrayOrMap instanceof Map) {
+      if (!(index instanceof String)) {
+        throw new RuntimeError(expr.bracket, "Key must be a valid.");
+      }
     }
 
-    return list.get(i);
+    if (arrayOrMap instanceof List) {
+      List<?> list = (List<?>) arrayOrMap;
+      int i = ((Double) index).intValue();
+      if (i < 0 || i >= list.size()) {
+        throw new RuntimeError(expr.bracket, "Array index out of bounds.");
+      }
+
+      return list.get(i);
+    } else if (arrayOrMap instanceof Map) {
+      Map<?, ?> map = (Map<?, ?>) arrayOrMap;
+      String key = ((String) index);
+      if (!(map.containsKey(key))) {
+        throw new RuntimeError(expr.bracket, "Object doesn't contain key: " + key);
+      }
+
+      return map.get(key);
+    }
+    throw new RuntimeError(expr.bracket, "Cannot recognize object type.");
   }
 
   @Override
@@ -407,6 +438,15 @@ class Interpreter implements
     }
 
     return evaluate(expr.right);
+  }
+
+  @Override
+  public Object visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
+    Map<String, Object> result = new HashMap<>();
+    for (Map.Entry<String, Expr> entry : expr.properties.entrySet()) {
+      result.put(entry.getKey(), evaluate(entry.getValue()));
+    }
+    return result;
   }
 
   @Override
