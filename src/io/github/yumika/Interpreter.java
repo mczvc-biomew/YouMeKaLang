@@ -63,6 +63,20 @@ class Interpreter implements
 
   // Resolving and Binding resolve
   void resolve(Expr expr, int depth) { locals.put(expr, depth); }
+  boolean resolveLogical(Expr expr, int depth) {
+    if (expr instanceof Expr.Variable) {
+      resolve(expr, depth);
+      return true;
+    }
+    if (expr instanceof Expr.Binary) {
+      if (resolveLogical(((Expr.Binary)expr).left, 0) || resolveLogical(((Expr.Binary)expr).right, 0))
+        return true;
+    } else if (expr instanceof Expr.Unary) {
+      return resolveLogical(((Expr.Unary) expr).right, 0);
+    }
+
+    return false;
+  }
 
   void executeBlock(List<Stmt> statements,
                    Environment environment) {
@@ -350,6 +364,36 @@ class Interpreter implements
   public Object visitGroupingExpr(Expr.Grouping expr) { return evaluate(expr.expression); }
 
   @Override
+  public Object visitListComprehensionExpr(Expr.ListComprehension expr) {
+    Object iterable = evaluate(expr.iterable);
+    if (!(iterable instanceof List)) {
+      throw new RuntimeError(expr.variable,
+          "Expected iterable in list comprehension.");
+    }
+    List<Object> result = new ArrayList<>();
+    List<?> source = (List<?>) iterable;
+    for (Object item : source) {
+      Environment loopEnv = new Environment(environment);
+      // scoped loop
+      loopEnv.define(expr.variable.lexeme, item);
+      if (expr.condition != null) {
+
+        if (!resolveLogical(expr.condition, 0)) {
+          throw new RuntimeError(expr.variable,
+              "Currently supports binary and unary expressions.");
+        }
+        Object cond = evaluateWithEnv(expr.condition, loopEnv);
+        if (!(cond instanceof Double) && (!(cond instanceof Boolean) || !(Boolean) cond))
+          continue;
+      }
+      resolve(expr.elementExpr, 0);
+      Object value = evaluateWithEnv(expr.elementExpr, loopEnv);
+      result.add(value);
+    }
+    return result;
+  }
+
+  @Override
   public Object visitLiteralExpr(Expr.Literal expr) { return expr.value; }
 
   @Override
@@ -425,6 +469,16 @@ class Interpreter implements
   public Object visitVariableExpr(Expr.Variable expr) {
     // Resolving and Binding call-look-up-variable
     return lookUpVariable(expr.name, expr);
+  }
+
+  private Object evaluateWithEnv(Expr expr, Environment env) {
+    Environment previous = this.environment;
+    try {
+      this.environment = env;
+      return evaluate(expr);
+    } finally {
+      this.environment = previous;
+    }
   }
 
   private Object lookUpVariable(Token name, Expr expr) {
