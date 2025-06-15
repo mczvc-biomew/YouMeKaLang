@@ -3,6 +3,8 @@ package io.github.yumika;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import static io.github.yumika.TokenType.*;
 
@@ -186,21 +188,39 @@ class Parser {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
     List<Token> parameters = new ArrayList<>();
+
+    boolean hasVarArgs = false;
+    boolean hasVarKwargs = false;
+    Token varArgsName = null;
+    Token kwArgsName = null;
+
     if (!check(RIGHT_PAREN)) {
       do {
         if (parameters.size() >= 255) {
           error(peek(), "Maximum of 255 parameters.");
         }
 
-        parameters.add(
-            consume(IDENTIFIER, "Expect parameter name."));
+        if (match(STAR)) {
+          if (match(STAR)) {
+            hasVarArgs = true;
+            varArgsName = consume(IDENTIFIER, "Expect name for variable arguments.");
+            parameters.add(varArgsName);
+          } else {
+            hasVarArgs = true;
+            kwArgsName = consume(IDENTIFIER, "Expect name for keyword arguments.");
+            parameters.add(kwArgsName);
+          }
+        } else {
+          parameters.add(
+              consume(IDENTIFIER, "Expect parameter name."));
+        }
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, body);
+    return new Stmt.Function(name, parameters, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
   }
 
   private List<Stmt> block() {
@@ -325,6 +345,7 @@ class Parser {
 
   private Expr finishCall(Expr callee) {
     List<Expr> arguments = new ArrayList<>();
+
     if (!check(RIGHT_PAREN)) {
       do {
         if (arguments.size() >= 255) {
@@ -420,8 +441,35 @@ class Parser {
         return new Expr.ArrayLiteral(elements);
       }
     }
+    if (match(LEFT_BRACE)) {
+      if (match(IDENTIFIER) || match(STRING)) {
+        return objectLiteral();
+      }
+    }
 
     throw error(peek(), "Expect expression.");
+  }
+
+  private Expr objectLiteral() {
+    Map<String, Expr> properties = new HashMap<>();
+    Token key = previous();
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      if (key == null) {
+        if (match(IDENTIFIER) || match(STRING)) {
+          key = previous();
+        } else {
+          throw new RuntimeError(key, "Expect property name.");
+        }
+      }
+      consume(COLON, "Expect ':' after property name.");
+      Expr value = expression();
+      properties.put(key.lexeme, value);
+      key = null;
+      if (!match(COMMA))
+        break;
+    }
+    consume(RIGHT_BRACE, "Expect '}' after object literal.");
+    return new Expr.ObjectLiteral(properties);
   }
 
   private boolean match(TokenType... types) {
