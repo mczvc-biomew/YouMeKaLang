@@ -103,7 +103,9 @@ public class YouMeKa {
 
   static void runtimeError(RuntimeError error) {
     System.err.println(error.getMessage() +
-        "\n[line " + error.token.line + "]");
+        (error.token != null ?
+          "\n[line " + error.token.line + "]"
+        : "."));
     hadRuntimeError = true;
   }
 }
