@@ -19,6 +19,7 @@ class Scanner {
     keywords.put("fun", FUN);
     keywords.put("for", FOR);
     keywords.put("if", IF);
+    keywords.put("in", IN);
     keywords.put("or", OR);
     keywords.put("null", NULL);
     keywords.put("print", PRINT);
