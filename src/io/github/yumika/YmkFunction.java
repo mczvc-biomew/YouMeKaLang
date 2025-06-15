@@ -1,6 +1,8 @@
 package io.github.yumika;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 class YmkFunction implements YmkCallable {
   private final Stmt.Function declaration;
@@ -35,10 +37,41 @@ class YmkFunction implements YmkCallable {
   public Object call(Interpreter interpreter,
                      List<Object> arguments) {
     Environment environment = new Environment(closure);
-
-    for (int i = 0; i < declaration.params.size(); i++) {
+    int normalParamCount = declaration.params.size();
+    // standard args
+    // Normal arguments
+    for (int i = 0; i < normalParamCount && i < arguments.size(); i++) {
       environment.define(declaration.params.get(i).lexeme,
           arguments.get(i));
+    }
+
+    if (declaration.varArgsName == null) {
+      throw new RuntimeError(null,
+          "Must have var args name.");
+    }
+    if (declaration.kwArgsName == null) {
+      throw new RuntimeError(null,
+          "Must have kwargs name.");
+    }
+
+    // *args
+    if (declaration.hasVarArgs) {
+      List<Object> varArgs = new ArrayList<>();
+      for (int i = normalParamCount; i < arguments.size(); i++) {
+        varArgs.add(arguments.get(i));
+      }
+
+      environment.define(declaration.varArgsName.lexeme, varArgs);
+    }
+
+    // **kwargs (last arg is expected to be Map<String, Object>)
+    if (declaration.hasVarKwargs) {
+      Object lastArg = arguments.get(arguments.size() - 1);
+      if (!(lastArg instanceof Map)) {
+        throw new RuntimeError(declaration.varArgsName,
+            "**kwargs must be passed as map.");
+      }
+      environment.define(declaration.kwArgsName.lexeme, lastArg);
     }
 
     try {
