@@ -39,18 +39,25 @@ class Environment {
 
   void define(String name, Object value) { values.put(name, value); }
 
-  Environment ancestor(int distance) {
+  Environment ancestor(int distance, String name) {
     Environment environment = this;
     for (int i = 0; i < distance; i++) {
+      if (environment.values.containsKey(name)) {
+        return environment;
+      }
       environment = environment.enclosing;
     }
 
     return environment;
   }
 
-  Object getAt(int distance, String name) { return ancestor(distance).values.get(name); }
+  Object getAt(int distance, String name) {
+//    System.out.println(name);
+//    System.out.println(ancestor(distance).values.values());
+    return ancestor(distance, name).values.get(name); }
 
-  void assignAt(int distance, Token name, Object value) { ancestor(distance).values.put(name.lexeme, value); }
+  void assignAt(int distance, Token name, Object value) { ancestor(distance, name.lexeme).values.put(name.lexeme, value); }
+  void assignAt(int distance, String name, Object value) { ancestor(distance, name).values.put(name, value); }
 
   @Override
   public String toString() {
