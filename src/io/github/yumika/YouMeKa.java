@@ -30,8 +30,8 @@ public class YouMeKa {
   }
 
   private static void runFile(String fileName) throws IOException {
-    Console console = new Console();
-    console.setVisible(true);
+//    Console console = new Console();
+//    console.setVisible(true);
 
     byte[] bytes = Files.readAllBytes(Paths.get(fileName));
     run(new String(bytes, Charset.defaultCharset()));
