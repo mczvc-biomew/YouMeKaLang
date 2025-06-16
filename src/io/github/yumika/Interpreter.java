@@ -16,6 +16,7 @@ class Interpreter implements
 
   Interpreter() {
     globals.define("undefined", new YmkUndefined());
+    globals.define("env", new YmkEnv());
     globals.define("clock", new YmkCallable() {
       @Override
       public int arity() { return 0; }
@@ -46,6 +47,10 @@ class Interpreter implements
     });
   }
 
+  Environment getEnvironment() {
+    return environment;
+  }
+
   void interpret(List<Stmt> statements) {
     try {
       for (Stmt statement : statements) {
@@ -69,10 +74,11 @@ class Interpreter implements
       return true;
     }
     if (expr instanceof Expr.Binary) {
-      if (resolveLogical(((Expr.Binary)expr).left, 0) && resolveLogical(((Expr.Binary)expr).right, 0))
-        return true;
+      boolean leftResult = resolveLogical(((Expr.Binary)expr).left, depth);
+      boolean rightReult = resolveLogical(((Expr.Binary)expr).right, depth);
+      return leftResult || rightReult;
     } else if (expr instanceof Expr.Unary) {
-      return resolveLogical(((Expr.Unary) expr).right, 0);
+      return resolveLogical(((Expr.Unary) expr).right, depth);
     }
 
     return false;
@@ -223,17 +229,17 @@ class Interpreter implements
 
   @Override
   public Object visitArrayAssignExpr(Expr.ArrayAssign expr) {
-    Object arrayOrMap = evaluate(expr.array);
+    Object arrayOrMapOrObjInstance = evaluate(expr.array);
     Object index = evaluate(expr.index);
     Object value = evaluate(expr.value);
 
-    if (!(arrayOrMap instanceof List) && !(arrayOrMap instanceof Map)) {
+    if (!(arrayOrMapOrObjInstance instanceof List || arrayOrMapOrObjInstance instanceof Map || arrayOrMapOrObjInstance instanceof YmkInstance)) {
       throw new RuntimeError(null, "Can only index arrays or object literals.");
-    } else if (arrayOrMap instanceof List) {
+    } else if (arrayOrMapOrObjInstance instanceof List) {
       if (!(index instanceof Double)) {
         throw new RuntimeError(null, "Index must be a number.");
       }
-    } else if (arrayOrMap instanceof Map) {
+    } else if (arrayOrMapOrObjInstance instanceof Map) {
       if (!(index instanceof String)) {
         throw new RuntimeError(null, "Key must be a valid.");
       }
@@ -242,16 +248,22 @@ class Interpreter implements
       throw new RuntimeError(expr.name, "Value must be a number, string, or array.");
     }
 
-    if (arrayOrMap instanceof List<?>) {
+    if (arrayOrMapOrObjInstance instanceof List<?>) {
       int i = ((Double) index).intValue();
-      List<Object> list = (List<Object>) arrayOrMap;
+      List<Object> list = (List<Object>) arrayOrMapOrObjInstance;
       list.set(i, value);
 
       return value;
-    } else if (arrayOrMap instanceof Map<?, ?>) {
+    } else if (arrayOrMapOrObjInstance instanceof Map<?, ?>) {
       String key = ((String) index);
-      Map<String, Object> map = (Map<String, Object>) arrayOrMap;
+      Map<String, Object> map = (Map<String, Object>) arrayOrMapOrObjInstance;
       map.put(key, value);
+
+      return value;
+    } else if (arrayOrMapOrObjInstance instanceof YmkInstance) {
+      String key = ((String) index);
+      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
+      instance.set(key, value);
 
       return value;
     }
@@ -261,37 +273,45 @@ class Interpreter implements
 
   @Override
   public Object visitArrayIndexExpr(Expr.ArrayIndex expr) {
-    Object arrayOrMap = evaluate(expr.array);
+    Object arrayOrMapOrObjInstance = evaluate(expr.array);
     Object index = evaluate(expr.index);
 
-    if (!(arrayOrMap instanceof List) && !(arrayOrMap instanceof Map)) {
+    if (!(arrayOrMapOrObjInstance instanceof List || arrayOrMapOrObjInstance instanceof Map || arrayOrMapOrObjInstance instanceof YmkInstance)) {
       throw new RuntimeError(expr.bracket, "Can only index arrays or objects.");
-    } else if (arrayOrMap instanceof List) {
+    } else if (arrayOrMapOrObjInstance instanceof List) {
       if (!(index instanceof Double)) {
         throw new RuntimeError(expr.bracket, "Index must be a number.");
       }
-    } else if (arrayOrMap instanceof Map) {
+    } else if (arrayOrMapOrObjInstance instanceof Map) {
       if (!(index instanceof String)) {
         throw new RuntimeError(expr.bracket, "Key must be a valid.");
       }
     }
 
-    if (arrayOrMap instanceof List) {
-      List<?> list = (List<?>) arrayOrMap;
+    if (arrayOrMapOrObjInstance instanceof List) {
+      List<?> list = (List<?>) arrayOrMapOrObjInstance;
       int i = ((Double) index).intValue();
       if (i < 0 || i >= list.size()) {
         throw new RuntimeError(expr.bracket, "Array index out of bounds.");
       }
 
       return list.get(i);
-    } else if (arrayOrMap instanceof Map) {
-      Map<?, ?> map = (Map<?, ?>) arrayOrMap;
+    } else if (arrayOrMapOrObjInstance instanceof Map) {
+      Map<?, ?> map = (Map<?, ?>) arrayOrMapOrObjInstance;
       String key = ((String) index);
       if (!(map.containsKey(key))) {
         throw new RuntimeError(expr.bracket, "Object doesn't contain key: " + key);
       }
 
       return map.get(key);
+    } else if (arrayOrMapOrObjInstance instanceof YmkInstance) {
+      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
+      String key = ((String) index);
+      if (!instance.containsField(key)) {
+        throw new RuntimeError(expr.bracket,
+            "Object doesn't contain field: " + key);
+      }
+      return instance.get(key);
     }
     throw new RuntimeError(expr.bracket, "Cannot recognize object type.");
   }
@@ -344,6 +364,15 @@ class Interpreter implements
 
         if (left instanceof String && right instanceof String) {
           return (String)left + (String)right;
+        }
+
+        if (expr.left instanceof Expr.Variable && expr.right instanceof Expr.Variable) {
+          Object leftVar = evaluate((Expr)expr.left);
+          Object rightVar = evaluate((Expr)expr.right);
+          System.out.println(leftVar + " " + rightVar);
+          if (leftVar instanceof String && rightVar instanceof String) {
+            return (String)leftVar + (String)rightVar;
+          }
         }
 
         // string-number-wrong-type
@@ -402,9 +431,18 @@ class Interpreter implements
 
   @Override
   public Object visitGetExpr(Expr.Get expr) {
+    if (expr.object instanceof Expr.This) {
+      resolve(expr.object, 0);
+    }
+
     Object object = evaluate(expr.object);
     if (object instanceof YmkInstance) {
       return ((YmkInstance) object).get(expr.name);
+    }
+
+    if (object instanceof Map) {
+      Object getValue = ((Map<String, Object>)object).get(expr.name.lexeme);
+      return  getValue;
     }
 
     throw new RuntimeError(expr.name,
@@ -416,8 +454,12 @@ class Interpreter implements
 
   @Override
   public Object visitLambdaExpr(Expr.Lambda expr) {
-    resolveLogical(expr.body, 0);
-    return new YmkLambda(expr, environment);
+    Object thisContext = null;
+    if (environment.contains("this")) {
+      thisContext = environment.getAt(0, "this");
+    }
+    resolveLogical(expr.body, 1);
+    return new YmkLambda(expr, environment, thisContext);
   }
 
   @Override
@@ -468,11 +510,19 @@ class Interpreter implements
 
   @Override
   public Object visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
-    Map<String, Object> result = new HashMap<>();
+    YmkClass objectLiteralKlass = new YmkClass("Object", null, new HashMap<>());
+    YmkInstance self = new YmkInstance(objectLiteralKlass);
+
     for (Map.Entry<String, Expr> entry : expr.properties.entrySet()) {
-      result.put(entry.getKey(), evaluate(entry.getValue()));
+      Object value = evaluate(entry.getValue());
+      if (value instanceof YmkLambda lambda) {
+        lambda = lambda.bind(self);
+        self.set(entry.getKey(), lambda);
+      } else {
+        self.set(entry.getKey(), value);
+      }
     }
-    return result;
+    return self;
   }
 
   @Override
@@ -550,7 +600,8 @@ class Interpreter implements
   private Object lookUpVariable(Token name, Expr expr) {
     Integer distance = locals.get(expr);
     if (distance != null) {
-      return environment.getAt(distance, name.lexeme);
+      Object value = environment.getAt(distance, name.lexeme);
+      return value;
     } else {
       try {
         return globals.get(name);
