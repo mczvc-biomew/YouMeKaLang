@@ -2,6 +2,7 @@ package io.github.yumika;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 class Environment {
   final Environment enclosing;
@@ -24,6 +25,12 @@ class Environment {
 
     throw new RuntimeError.UndefinedException(name,
         "Undefined variable '" + name.lexeme + "'.");
+  }
+
+  public void forEach(BiConsumer<String, Object> action) {
+    for (var e : values.entrySet()) {
+      action.accept(e.getKey(), e.getValue());
+    }
   }
 
   void assign(Token name, Object value) {
