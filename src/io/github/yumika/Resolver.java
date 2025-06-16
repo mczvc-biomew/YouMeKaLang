@@ -19,7 +19,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     FUNCTION,
     // function-type-initializer
     INITIALIZER,
-    METHOD
+    METHOD,
+    LAMBDA
   }
 
   private enum ClassType {
@@ -231,7 +232,18 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitLambdaExpr(Expr.Lambda expr) {
+    FunctionType enclosingFunction = currentFunction;
+    currentFunction = FunctionType.LAMBDA;
+
+    beginScope();
+    for (Token param : expr.params) {
+      declare(param);
+      define(param);
+    }
     resolve(expr.body);
+    endScope();
+
+    currentFunction = enclosingFunction;
     return null;
   }
 
@@ -289,10 +301,10 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   @Override
   public Void visitThisExpr(Expr.This expr) {
     // this-outside-of-class
-    if (currentClass == ClassType.NONE) {
-      YouMeKa.error(expr.keyword, "Can't use 'this' outside of a class.");
-      return null;
-    }
+//    if (currentClass == ClassType.NONE) {
+//      YouMeKa.error(expr.keyword, "Can't use 'this' outside of a class.");
+//      return null;
+//    }
 
     resolveLocal(expr, expr.keyword);
     return null;
