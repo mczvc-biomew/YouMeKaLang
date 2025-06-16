@@ -1,0 +1,47 @@
+fun hello() {
+    var hi = "Hello";
+    var welcome = "welcome";
+    return {
+        world: " World!",
+        greetings: || hi + this.world,
+        greetings2: || "Hello! Greetings and " + welcome,
+        greetings3: || this.greetings2() + "!"
+    };
+}
+
+print "H-e-l-l-o";
+hello();
+print hello();
+print hello()["world"];
+print "Does capture local variable";
+var greetings = hello()["greetings"];
+print "Hi!";
+print greetings;
+// print env();
+print greetings();
+print env();
+print "";
+
+print hello()["greetings2"]() + ".";
+print hello()["greetings3"]();
+
+
+// lambda
+var add = |a,b| a+b;
+var triple = |x| x*3;
+var always = || 42;
+var HelloWorld = || { return "Hello" + " || " + "World!"; };
+
+print add(1,2);
+print triple(3);
+print triple(4);
+print always();
+print HelloWorld();
+print "";
+
+var noReturn = || {};
+print "var noReturn = || {};";
+print "noReturn() == undefined:";
+print noReturn() == undefined;
+print "print noReturn;";
+print noReturn;
