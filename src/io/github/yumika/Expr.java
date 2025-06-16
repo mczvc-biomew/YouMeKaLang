@@ -283,6 +283,11 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitVariableExpr(this); }
 
     final Token name;
+
+    @Override
+    public String toString() {
+      return "<Variable: " + name.lexeme + "(" + name.literal + ")>";
+    }
   }
 
   abstract <R> R accept(Visitor<R> visitor);
