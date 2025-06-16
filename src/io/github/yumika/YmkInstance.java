@@ -9,21 +9,30 @@ class YmkInstance {
 
   YmkInstance(YmkClass klass) { this.klass = klass; }
 
-  Object get(Token name) {
-    if (fields.containsKey(name.lexeme)) {
-      return fields.get(name.lexeme);
+  boolean containsField(String name) {
+    return fields.containsKey(name);
+  }
+
+  Object get(String name) {
+    if (fields.containsKey(name)) {
+      return fields.get(name);
     }
 
-    YmkFunction method = klass.findMethod(name.lexeme);
+    YmkFunction method = klass.findMethod(name);
 
     if (method != null) return method.bind(this);
 
-    throw new RuntimeError(name,
-        "Undefined property '" + name.lexeme + "'.");
+    throw new RuntimeError(null,
+        "Undefined property '" + name + "'.");
+  }
+
+  Object get(Token name) {
+    return get(name.lexeme);
   }
 
   void set(Token name, Object value) { fields.put(name.lexeme, value); }
+  void set(String name, Object value) { fields.put(name, value); }
 
   @Override
-  public String toString() { return klass.name + " instance"; }
+  public String toString() { return klass.name + " instance = " + fields; }
 }
