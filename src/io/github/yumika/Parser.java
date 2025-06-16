@@ -67,6 +67,8 @@ class Parser {
   }
 
   private Stmt statement() {
+    if (match(IMPORT)) return importStatement();
+
     if (match(FOR)) return forStatement();
 
     if (match(IF)) return ifStatement();
@@ -137,6 +139,26 @@ class Parser {
     }
 
     return new Stmt.If(condition, thenBranch, elseBranch);
+  }
+
+  private Stmt importStatement() {
+    List<Token> pathParts = new ArrayList<>();
+    Token module = consume(IDENTIFIER, "Expect module name.");
+    Token alias = module;
+
+    pathParts.add(module);
+
+    while (match(DOT)) {
+      pathParts.add(consume(IDENTIFIER,
+          "Expect identifier after '.'."));
+    }
+
+    if (match(AS)) {
+      alias = consume(IDENTIFIER, "Expect alias after 'as'.");
+    }
+
+    consume(SEMICOLON, "Expect ';' import statement.");
+    return new Stmt.Import(pathParts, alias);
   }
 
   private Stmt printStatement() {
