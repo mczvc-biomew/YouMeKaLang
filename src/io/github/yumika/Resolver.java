@@ -125,6 +125,13 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitImportStmt(Stmt.Import stmt) {
+    declare(stmt.alias);
+    define(stmt.alias);
+    return null;
+  }
+
+  @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
     resolve(stmt.expression);
     return null;
