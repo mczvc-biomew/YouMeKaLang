@@ -75,6 +75,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitImportStmt(Stmt.Import stmt) {
+    return parenthesize2("import", stmt.pathParts, stmt.alias);
+  }
+
+  @Override
   public String visitPrintStmt(Stmt.Print stmt) { return parenthesize("print", stmt.expression); }
 
   @Override
