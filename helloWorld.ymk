@@ -1,20 +1,11 @@
-fun hello() {
-    var hi = "Hello";
-    var welcome = "welcome";
-    return {
-        world: " World!",
-        greetings: || hi + this.world,
-        greetings2: || "Hello! Greetings and " + welcome,
-        greetings3: || this.greetings2() + "!"
-    };
-}
+import modules.helloWorld as hw;
 
 print "H-e-l-l-o";
-hello();
-print hello();
-print hello()["world"];
+hw.hello();
+print hw.hello();
+print hw.hello()["world"];
 print "Does capture local variable";
-var greetings = hello()["greetings"];
+var greetings = hw.hello()["greetings"];
 print "Hi!";
 print greetings;
 // print env();
@@ -22,8 +13,8 @@ print greetings();
 print env();
 print "";
 
-print hello()["greetings2"]() + ".";
-print hello()["greetings3"]();
+print hw.hello()["greetings2"]() + ".";
+print hw.hello()["greetings3"]();
 
 
 // lambda
