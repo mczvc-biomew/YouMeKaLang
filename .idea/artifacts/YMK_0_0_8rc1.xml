@@ -1,7 +1,7 @@
 <component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="YMKB">
-    <output-path>$PROJECT_DIR$/out/artifacts/YMKB</output-path>
-    <root id="archive" name="YMKB.jar">
+  <artifact type="jar" build-on-make="true" name="YMK-0.0.8rc1">
+    <output-path>$PROJECT_DIR$/out/artifacts/YMK_0_0_8rc1</output-path>
+    <root id="archive" name="YMK-0.0.8rc1.jar">
       <element id="directory" name="META-INF">
         <element id="file-copy" path="$PROJECT_DIR$/META-INF/MANIFEST.MF" />
       </element>
