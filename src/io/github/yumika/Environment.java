@@ -11,6 +11,10 @@ class Environment {
 
   Environment(Environment enclosing) { this.enclosing = enclosing;}
 
+  boolean contains(String name) {
+    return values.containsKey(name);
+  }
+
   Object get(Token name) {
     if (values.containsKey(name.lexeme)) {
       return values.get(name.lexeme);
@@ -51,10 +55,7 @@ class Environment {
     return environment;
   }
 
-  Object getAt(int distance, String name) {
-//    System.out.println(name);
-//    System.out.println(ancestor(distance).values.values());
-    return ancestor(distance, name).values.get(name); }
+  Object getAt(int distance, String name) { return ancestor(distance, name).values.get(name); }
 
   void assignAt(int distance, Token name, Object value) { ancestor(distance, name.lexeme).values.put(name.lexeme, value); }
   void assignAt(int distance, String name, Object value) { ancestor(distance, name).values.put(name, value); }
