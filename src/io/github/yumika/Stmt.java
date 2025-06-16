@@ -9,6 +9,7 @@ abstract class Stmt {
     R visitExpressionStmt(Expression stmt);
     R visitFunctionStmt(Function stmt);
     R visitIfStmt(If stmt);
+    R visitImportStmt(Import stmt);
     R visitPrintStmt(Print stmt);
     R visitReturnStmt(Return stmt);
     R visitVarStmt(Var stmt);
@@ -98,6 +99,19 @@ abstract class Stmt {
     final Expr condition;
     final Stmt thenBranch;
     final Stmt elseBranch;
+  }
+
+  static class Import extends Stmt {
+    Import(List<Token> pathParts, Token alias) {
+      this.pathParts = pathParts;
+      this.alias = alias;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitImportStmt(this); }
+
+    final List<Token> pathParts;
+    final Token alias;
   }
 
   static class Print extends Stmt {
