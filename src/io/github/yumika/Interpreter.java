@@ -1,23 +1,38 @@
 package io.github.yumika;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 class Interpreter implements
     Expr.Visitor<Object>,
     Stmt.Visitor<Void>
 {
-  final Environment globals = new Environment();
-  private Environment environment = globals;
+  final Environment globals;
+  private Environment environment;
 
   private final Map<Expr, Integer> locals = new HashMap<>();
 
   Interpreter() {
-    globals.define("undefined", new YmkUndefined());
-    globals.define("env", new YmkEnv());
-    globals.define("clock", new YmkCallable() {
+    globals = new Environment();
+    environment = globals;
+
+    initGlobalDefinitions(globals);
+  }
+
+  Interpreter(Environment env) {
+    this.globals = env;
+    environment = globals;
+
+    initGlobalDefinitions(globals);
+  }
+
+  void initGlobalDefinitions(Environment globalEnv) {
+    globalEnv.define("undefined", new YmkUndefined());
+    globalEnv.define("env", new YmkEnv());
+    globalEnv.define("clock", new YmkCallable() {
       @Override
       public int arity() { return 0; }
 
@@ -31,7 +46,7 @@ class Interpreter implements
       public String toString() { return "<native fn>"; }
     });
 
-    globals.define("exit", new YmkCallable() {
+    globalEnv.define("exit", new YmkCallable() {
       @Override
       public int arity() { return 0;}
 
@@ -181,6 +196,64 @@ class Interpreter implements
     }
 
     return null;
+  }
+
+  @Override
+  public Void visitImportStmt(Stmt.Import stmt) {
+    StringBuilder pathBuilder = new StringBuilder();
+    String aliasName = stmt.alias.lexeme;
+
+    for (int i = 0; i < stmt.pathParts.size(); i++) {
+      pathBuilder.append(stmt.pathParts.get(i).lexeme);
+      if (i < stmt.pathParts.size() - 1) {
+        pathBuilder.append("/");
+      }
+    }
+
+    String path = pathBuilder.toString();
+
+    String sourcePath = System.getProperty("user.dir") + '/' + resolveModulePath(path);
+
+    String source;
+    try {
+      source = Files.readString(Paths.get(sourcePath));
+    } catch (IOException e) {
+      throw new RuntimeError(null,
+          "Cannot read module '" + sourcePath + "'");
+    }
+
+    List<Stmt> statements = new Parser(new Scanner(source).scanTokens()).parse();
+
+    Environment moduleEnv = new Environment(); // isolated;
+
+    Interpreter moduleInterpreter = new Interpreter(moduleEnv);
+    for (Stmt s : statements) {
+      moduleInterpreter.interpret(Collections.singletonList(s));
+    }
+
+    YmkClass moduleKlass = new YmkClass("Module", null, new HashMap<>());
+    YmkInstance namespace = new YmkInstance(moduleKlass);
+    moduleEnv.forEach((k, v) -> namespace.set(k, v));
+    environment.define(aliasName, namespace);
+
+    return null;
+  }
+
+  private String resolveModulePath(String importPath) {
+    // Normalize to use forward slashes
+    String normalized = importPath.replace(".", "/");
+
+    // Add your supported extensions in order of priority
+    String[] extensions = { ".ymk", ".yumika", ".mika" };
+
+    for (String ext : extensions) {
+      File candidate = new File(normalized + ext);
+      if (candidate.exists()) {
+        return candidate.getPath();
+      }
+    }
+
+    throw new RuntimeError(null, "Module '" + importPath + "' not found.");
   }
 
   @Override
