@@ -1,5 +1,9 @@
 package io.github.yumika;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
@@ -100,7 +104,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
-  public String visitArrayIndexExpr(Expr.ArrayIndex expr) { return parenthesize2("[]", expr.index, expr.index); }
+  public String visitArrayIndexExpr(Expr.ArrayIndex expr) { return parenthesize2("[]", expr.index, expr.array); }
 
   @Override
   public String visitAssignExpr(Expr.Assign expr) { return parenthesize2("=", expr.name.lexeme, expr.value); }
@@ -138,7 +142,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   @Override
   public String visitLiteralExpr(Expr.Literal expr) {
     if (expr.value == null) return "null";
-    return expr.value.toString();
+    return (expr.value instanceof String ? "\"" : "") + expr.value.toString() + (expr.value instanceof String ? "\"" : "");
   }
 
   @Override
@@ -237,5 +241,28 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
         )
     );
     System.out.println(new AstPrinter().print(listComp));
+    try {
+      runFile("helloWorld.ymk");
+    } catch (Exception e) {
+      System.out.println(e.getMessage());
+    }
+  }
+
+  private static void runFile(String fileName) throws IOException {
+    byte[] bytes = Files.readAllBytes(Paths.get(fileName));
+    run(new String(bytes, Charset.defaultCharset()));
+  }
+
+  private static void run(String source) {
+    Scanner scanner = new Scanner(source);
+    List<Token> tokens = scanner.scanTokens();
+
+    Parser parser = new Parser(tokens);
+    List<Stmt> statements = parser.parse();
+    AstPrinter printer = new AstPrinter();
+
+    for (Stmt statement : statements) {
+      System.out.println(printer.print(statement));
+    }
   }
 }
