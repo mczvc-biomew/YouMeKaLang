@@ -13,12 +13,14 @@ class Scanner {
   static {
     keywords = new HashMap<>();
     keywords.put("and", AND);
+    keywords.put("as", AS);
     keywords.put("class", CLASS);
     keywords.put("else", ELSE);
     keywords.put("false", FALSE);
     keywords.put("fun", FUN);
     keywords.put("for", FOR);
     keywords.put("if", IF);
+    keywords.put("import", IMPORT);
     keywords.put("in", IN);
     keywords.put("or", OR);
     keywords.put("null", NULL);
