@@ -1,4 +1,5 @@
-# YouMeKa Lang
+# YouMeKa Lang ![YouMeKa](https://github.com/user-attachments/assets/f765c562-3443-4ee5-8142-d6e6bd38ede4)
+
 ### [0.0.8]
 * unified variable assignment
 * Functions
