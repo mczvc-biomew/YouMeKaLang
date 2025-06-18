@@ -14,6 +14,7 @@ class Scanner {
     keywords = new HashMap<>();
     keywords.put("and", AND);
     keywords.put("as", AS);
+    keywords.put("case", CASE);
     keywords.put("class", CLASS);
     keywords.put("else", ELSE);
     keywords.put("false", FALSE);
@@ -25,12 +26,14 @@ class Scanner {
     keywords.put("or", OR);
     keywords.put("null", NULL);
     keywords.put("print", PRINT);
+    keywords.put("puts", PUTS);
     keywords.put("return", RETURN);
     keywords.put("super", SUPER);
     keywords.put("this", THIS);
     keywords.put("true", TRUE);
     keywords.put("undefined", UNDEFINED);
     keywords.put("var", VAR);
+    keywords.put("when", WHEN);
     keywords.put("while", WHILE);
   }
 
@@ -75,7 +78,8 @@ class Scanner {
         addToken(match('=') ? BANG_EQUAL : BANG);
         break;
       case '=':
-        addToken(match('=') ? EQUAL_EQUAL : EQUAL);
+        addToken(match('=') ? EQUAL_EQUAL
+            : (match('>') ? ARROW : EQUAL));
         break;
       case '<':
         addToken(match('=') ? LESS_EQUAL : LESS);
