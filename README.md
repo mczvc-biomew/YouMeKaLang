@@ -15,3 +15,6 @@
 
 > execute
 > ``java -jar <name-of-ymk-executable> <source-file.ymk>``
+
+## Examples:
+> See [helloWorld](./helloWorld.ymk)
