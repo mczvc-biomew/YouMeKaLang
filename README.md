@@ -10,7 +10,7 @@
 * Object Literals
 
 ## How to use:
-### Download [YMK-0.0.8rc1](https://github.com/mczvc-biomew/YouMeKaLang/releases/download/0.0.8rc1/YMK-0.0.8rc1.jar)
+### Download [YMK-0.0.8rc2](https://github.com/mczvc-biomew/YouMeKaLang/releases/download/0.0.8/YMK-0.0.8rc2.jar)
 
 > execute
 > ``java -jar <name-of-ymk-executable> <source-file.ymk>``
