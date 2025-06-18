@@ -25,6 +25,17 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     return builder.toString();
   }
 
+  public String visitCaseStmt(Stmt.Case stmt) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("(case " + stmt.expression);
+
+    for (Stmt.Case.WhenClause clause : stmt.whenClauses) {
+      builder.append("\n{when: " + clause.match + " [" + clause.body + "]}");
+    }
+    builder.append(")");
+    return builder.toString();
+  }
+
   @Override
   public String visitClassStmt(Stmt.Class stmt) {
     StringBuilder builder = new StringBuilder();
@@ -83,6 +94,9 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   public String visitPrintStmt(Stmt.Print stmt) { return parenthesize("print", stmt.expression); }
 
   @Override
+  public String visitPutsStmt(Stmt.Puts stmt) { return parenthesize("puts", stmt.expression ); }
+
+  @Override
   public String visitReturnStmt(Stmt.Return stmt) {
     if (stmt.value == null) return "(return)";
     return parenthesize("return", stmt.value);
@@ -127,6 +141,19 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
   @Override
   public String visitCallExpr(Expr.Call expr) { return parenthesize2("call", expr.callee, expr.arguments); }
+
+  @Override
+  public String visitCaseExpr(Expr.Case expr) {
+
+    StringBuilder builder = new StringBuilder();
+    builder.append("(case expression" + expr.expression);
+
+    for (Expr.Case.WhenClause clause : expr.whenClauses) {
+      builder.append("\n{when: " + clause.match + " [" + clause.result + "]}");
+    }
+    builder.append(")");
+    return builder.toString();
+  }
 
   @Override
   public String visitGetExpr(Expr.Get expr) { return parenthesize2(".", expr.object, expr.name.lexeme); }
