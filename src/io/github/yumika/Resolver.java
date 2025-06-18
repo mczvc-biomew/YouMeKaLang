@@ -46,6 +46,20 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitCaseStmt(Stmt.Case stmt) {
+    resolve(stmt.expression);
+    for (Stmt.Case.WhenClause clause : stmt.whenClauses) {
+      resolve(clause.match);
+      resolve(clause.body);
+    }
+    if (stmt.elseBranch != null) {
+      resolve(stmt.elseBranch);
+    }
+
+    return null;
+  }
+
+  @Override
   public Void visitClassStmt(Stmt.Class stmt) {
     ClassType enclosingClass = currentClass;
     currentClass = ClassType.CLASS;
@@ -138,6 +152,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitPutsStmt(Stmt.Puts stmt) {
+    resolve(stmt.expression);
+    return null;
+  }
+
+  @Override
   public Void visitReturnStmt(Stmt.Return stmt) {
     if (currentFunction == FunctionType.NONE) {
 //      YouMeKa.error(stmt.keyword, "Can't return from top-level code.");
@@ -220,6 +240,20 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
     for (Expr argument : expr.arguments) {
       resolve(argument);
+    }
+
+    return null;
+  }
+
+  @Override
+  public Void visitCaseExpr(Expr.Case expr) {
+    resolve(expr.expression);
+    for (Expr.Case.WhenClause clause : expr.whenClauses) {
+      resolve(clause.match);
+      resolve(clause.result);
+    }
+    if (expr.elseBranch != null) {
+      resolve(expr.elseBranch);
     }
 
     return null;
