@@ -32,6 +32,21 @@ class Interpreter implements
   void initGlobalDefinitions(Environment globalEnv) {
     globalEnv.define("undefined", new YmkUndefined());
     globalEnv.define("env", new YmkEnv());
+    globalEnv.define("str", new YmkCallable() {
+      @Override
+      public int arity() {
+        return -2;
+      }
+
+      @Override
+      public Object call(Interpreter interpreter, List<Object> arguments) {
+        StringBuilder strBuilder = new StringBuilder();
+        for (Object argument : arguments) {
+          strBuilder.append(argument.toString()).append(" ");
+        }
+        return strBuilder.toString();
+      }
+    });
     globalEnv.define("clock", new YmkCallable() {
       @Override
       public int arity() { return 0; }
@@ -126,6 +141,25 @@ class Interpreter implements
   @Override
   public Void visitBlockStmt(Stmt.Block stmt) {
     executeBlock(stmt.statements, new Environment(environment));
+    return null;
+  }
+
+  @Override
+  public Void visitCaseStmt(Stmt.Case stmt) {
+    Object value = evaluate(stmt.expression);
+
+    for (Stmt.Case.WhenClause clause : stmt.whenClauses) {
+      Object match = evaluate(clause.match);
+      if (isEqual(value, match)) {
+        execute(clause.body);
+        return null;
+      }
+    }
+
+    if (stmt.elseBranch != null) {
+      execute(stmt.elseBranch);
+    }
+
     return null;
   }
 
@@ -260,6 +294,13 @@ class Interpreter implements
   public Void visitPrintStmt(Stmt.Print stmt) {
     Object value = evaluate(stmt.expression);
     System.out.println(stringify(value));
+    return null;
+  }
+
+  @Override
+  public Void visitPutsStmt(Stmt.Puts stmt) {
+    Object value = evaluate(stmt.expression);
+    System.out.print(stringify(value));
     return null;
   }
 
@@ -493,13 +534,31 @@ class Interpreter implements
 
     YmkCallable function = (YmkCallable)callee;
     // check-arity
-    if (arguments.size() != function.arity()) {
+    if (function.arity() != -2 && arguments.size() != function.arity()) {
       throw new RuntimeError(expr.paren, "Expected " +
           function.arity() + " arguments but got " +
           arguments.size() + ".");
     }
 
     return function.call(this, arguments);
+  }
+
+  @Override
+  public Object visitCaseExpr(Expr.Case expr) {
+    Object value = evaluate(expr.expression);
+
+    for (Expr.Case.WhenClause clause : expr.whenClauses) {
+      Object match = evaluate(clause.match);
+      if (isEqual(value, match)) {
+        return evaluate(clause.result);
+      }
+    }
+
+    if (expr.elseBranch != null) {
+      return evaluate(expr.elseBranch);
+    }
+
+    return null;
   }
 
   @Override
