@@ -53,6 +53,7 @@ class Environment {
   Environment ancestor(int distance, String name) {
     Environment environment = this;
     for (int i = 0; i < distance; i++) {
+      assert environment != null;
       if (environment.values.containsKey(name)) {
         return environment;
       }
