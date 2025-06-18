@@ -698,6 +698,7 @@ class Interpreter implements
     Object right = evaluate(expr.right);
 
     switch (expr.operator.type) {
+      case NOT:
       case BANG:
         return !isTruthy(right);
       case MINUS:
