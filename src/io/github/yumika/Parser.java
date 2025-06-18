@@ -73,7 +73,11 @@ class Parser {
 
     if (match(IF)) return ifStatement();
 
+    if (match(CASE)) return caseStatement();
+
     if (match(PRINT)) return printStatement();
+
+    if (match(PUTS)) return putsStatement();
 
     if (match(RETURN)) return returnStatement();
 
@@ -82,6 +86,32 @@ class Parser {
     if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
     return expressionStatement();
+  }
+
+  private Stmt caseStatement() {
+    Expr caseExpr = expression();
+    consume(LEFT_BRACE, "Expect '{' after case statement.");
+
+    List<Stmt.Case.WhenClause> whenClauses = new ArrayList<>();
+    Stmt elseBranch = null;
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      if (match(WHEN)) {
+        Expr matchExpr = expression();
+        consume(ARROW, "Expect '=>' after 'when' condition.");
+        Stmt body = statement();
+        whenClauses.add(new Stmt.Case.WhenClause(matchExpr, body));
+      } else if (match(ELSE)) {
+        consume(ARROW, "Expect 'when' or 'else' in case.");
+        elseBranch = statement();
+      } else {
+        throw error(peek(), "Expect 'when' or 'else' in case.");
+      }
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after case block.");
+    return new Stmt.Case(caseExpr, whenClauses, elseBranch);
+
   }
 
   private Stmt forStatement() {
@@ -165,6 +195,12 @@ class Parser {
     Expr value = expression();
     consume(SEMICOLON, "Expect ';' after value.");
     return new Stmt.Print(value);
+  }
+
+  private Stmt putsStatement() {
+    Expr value = expression();
+    consume(SEMICOLON, "Expect ';' after value.");
+    return new Stmt.Puts(value);
   }
 
   private Stmt returnStatement() {
@@ -469,11 +505,40 @@ class Parser {
       }
     }
 
+    if (match(CASE)) return caseExpression();
+
     if (check(PIPE)) {
       return lambda();
     }
 
     throw error(peek(), "Expect expression.");
+  }
+
+  private Expr caseExpression() {
+    Expr caseExpr = expression();
+    consume(LEFT_BRACE, "Expect '{' after 'case'.");
+
+    List<Expr.Case.WhenClause> whenClauses = new ArrayList<>();
+    Expr elseBranch = null;
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      if (match(WHEN)) {
+        Expr match = expression();
+        consume(ARROW, "Expect '=>' after 'when'.");
+        Expr result = expression();
+        consume(SEMICOLON, "Expect ';' after case branch.");
+        whenClauses.add(new Expr.Case.WhenClause(match, result));
+      } else if (match(ELSE)) {
+        consume(ARROW, "Expect '=>' after 'else'.");
+        elseBranch = expression();
+        consume(SEMICOLON, "Expect ';' after else branch.");
+      } else {
+        throw error(peek(), "Expect 'when' or 'else' in case.");
+      }
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after case expression.");
+    return new Expr.Case(caseExpr, whenClauses, elseBranch);
   }
 
   private Expr lambda() {
