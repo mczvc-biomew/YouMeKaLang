@@ -7,7 +7,7 @@ print hw.hello()["world"];
 print "Does capture local variable";
 var greetings = hw.hello()["greetings"];
 print "Hi!";
-print greetings;
+puts str(greetings, "says:");
 // print env();
 print greetings();
 print env();
@@ -23,10 +23,31 @@ var triple = |x| x*3;
 var always = || 42;
 var HelloWorld = || { return "Hello" + " || " + "World!"; };
 
+puts "1 add 2 is ";
 print add(1,2);
-print triple(3);
-print triple(4);
-print always();
+var l1 = triple(3);
+case l1 {
+    when 9 => print "number 3 tripled is 9";
+    else => print l1;
+}
+var l2 = triple(4);
+case l2 {
+    when 12 => print "number 4 tripled is 12";
+    else => print l2;
+}
+var solution = always();
+case solution {
+    when 42 => puts "42 is the solution to ";
+    else => print "no solution at all!";
+}
+
+var solution = case solution {
+    when 42 => "life";
+    else => "none";
+};
+
+print solution;
+
 print HelloWorld();
 print "";
 
