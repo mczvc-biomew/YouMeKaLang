@@ -57,3 +57,4 @@ print "noReturn() == undefined:";
 print noReturn() == undefined;
 print "print noReturn;";
 print noReturn;
+print !true == not true;
