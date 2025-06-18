@@ -4,7 +4,7 @@
 * unified variable assignment
 * Functions
 * Class
-* If, Case conditional Expression + (and, or Binary Expressions)
+* If, Case conditional Expression + (and, or, not binary operators)
 * Array, Number, String Literals
 * Python-like list comprehension
 * Lambda function (syntax like Ruby; not function arrows)
