@@ -11,6 +11,7 @@ abstract class Expr {
     R visitAssignExpr(Assign expr);
     R visitBinaryExpr(Binary expr);
     R visitBlockExpr(Block expr);
+    R visitCaseExpr(Case expr);
     R visitCallExpr(Call expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
@@ -124,6 +125,31 @@ abstract class Expr {
     final Expr callee;
     final Token paren;
     final List<Expr> arguments;
+  }
+
+  static class Case extends Expr {
+    Case(Expr expression, List<WhenClause> whenClauses, Expr elseBranch) {
+      this.expression = expression;
+      this.whenClauses = whenClauses;
+      this.elseBranch = elseBranch;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitCaseExpr(this); }
+
+    final Expr expression;
+    final List<WhenClause> whenClauses;
+    final Expr elseBranch;
+
+    static class WhenClause {
+      WhenClause(Expr match, Expr result) {
+        this.match = match;
+        this.result = result;
+      }
+
+      final Expr match;
+      final Expr result;
+    }
   }
 
   static class Get extends Expr {
