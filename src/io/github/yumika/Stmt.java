@@ -5,12 +5,14 @@ import java.util.List;
 abstract class Stmt {
   interface Visitor<R> {
     R visitBlockStmt(Block stmt);
+    R visitCaseStmt(Case stmt);
     R visitClassStmt(Class stmt);
     R visitExpressionStmt(Expression stmt);
     R visitFunctionStmt(Function stmt);
     R visitIfStmt(If stmt);
     R visitImportStmt(Import stmt);
     R visitPrintStmt(Print stmt);
+    R visitPutsStmt(Puts stmt);
     R visitReturnStmt(Return stmt);
     R visitVarStmt(Var stmt);
     R visitWhileStmt(While stmt);
@@ -23,6 +25,31 @@ abstract class Stmt {
     <R> R accept(Visitor<R> visitor) { return visitor.visitBlockStmt(this); }
 
     final List<Stmt> statements;
+  }
+
+  static class Case extends Stmt {
+    Case(Expr expression, List<WhenClause> whenClauses, Stmt elseBranch) {
+      this.expression = expression;
+      this.whenClauses = whenClauses;
+      this.elseBranch = elseBranch;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitCaseStmt(this); }
+
+    final Expr expression;
+    final List<WhenClause> whenClauses;
+    final Stmt elseBranch;
+
+    static class WhenClause {
+      WhenClause(Expr match, Stmt body) {
+        this.match = match;
+        this.body = body;
+      }
+
+      final Expr match;
+      final Stmt body;
+    }
   }
 
   static class Class extends Stmt {
@@ -119,6 +146,15 @@ abstract class Stmt {
 
     @Override
     <R> R accept(Visitor<R> visitor) { return visitor.visitPrintStmt(this); }
+
+    final Expr expression;
+  }
+
+  static class Puts extends Stmt {
+    Puts(Expr expression) { this.expression = expression; }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitPutsStmt(this); }
 
     final Expr expression;
   }
