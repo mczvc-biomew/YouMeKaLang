@@ -51,6 +51,20 @@ print solution;
 print HelloWorld();
 print "";
 
+var newStrs = new string[50];
+for (var i = 0; i < 50; i++ ) {
+    newStrs[i] = "Hello World";
+}
+print newStrs;
+
+var i = 0;
+print --i;
+print ++i;
+print i--;
+print i++;
+print i;
+print "";
+
 var noReturn = || {};
 print "var noReturn = || {};";
 print "noReturn() == undefined:";
