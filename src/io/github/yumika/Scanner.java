@@ -24,6 +24,7 @@ class Scanner {
     keywords.put("import", IMPORT);
     keywords.put("in", IN);
     keywords.put("or", OR);
+    keywords.put("new", NEW);
     keywords.put("not", NOT);
     keywords.put("null", NULL);
     keywords.put("print", PRINT);
@@ -68,13 +69,17 @@ class Scanner {
       case '}': addToken(RIGHT_BRACE); break;
       case ',': addToken(COMMA); break;
       case '.': addToken(DOT); break;
-      case '-': addToken(MINUS); break;
-      case '+': addToken(PLUS); break;
       case '|': addToken(PIPE); break;
       case ':': addToken(COLON); break;
       case ';': addToken(SEMICOLON); break;
       case '*': addToken(STAR); break;
       // two-char-tokens
+      case '-':
+        addToken(match('-') ? MINUS_MINUS : MINUS);
+        break;
+      case '+':
+        addToken(match('+') ? PLUS_PLUS : PLUS);
+        break;
       case '!':
         addToken(match('=') ? BANG_EQUAL : BANG);
         break;
