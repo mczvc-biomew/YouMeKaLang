@@ -641,6 +641,33 @@ class Interpreter implements
   }
 
   @Override
+  public Object visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
+    Object sizeVal = evaluate(expr.size);
+
+    if (!(sizeVal instanceof Double)) {
+      throw new RuntimeError(expr.type, "Array size must be a number.");
+    }
+
+    int size = ((Double) sizeVal).intValue();
+    if (size < 0) {
+      throw new RuntimeError(expr.type, "Array size cannot be negative.");
+    }
+
+    String typeName = expr.type.lexeme;
+    Object[] result = new Object[size];
+
+    Object defaultValue = switch (typeName) {
+      case "int", "number" -> 0.0;
+      case "string" -> "";
+      case "bool", "boolean" -> false;
+      default -> null;
+    };
+
+    Arrays.fill(result, defaultValue);
+    return Arrays.asList(result);
+  }
+
+  @Override
   public Object visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     YmkClass objectLiteralKlass = new YmkClass("Object", null, new HashMap<>());
     YmkInstance self = new YmkInstance(objectLiteralKlass);
@@ -655,6 +682,47 @@ class Interpreter implements
       }
     }
     return self;
+  }
+
+  @Override
+  public Object visitPostfixExpr(Expr.Postfix expr) {
+    Object value = environment.get(expr.variable.name);
+    if (!(value instanceof Double)) {
+      throw new RuntimeError(expr.operator, "Operand must be number.");
+    }
+
+    double original = (Double) value;
+    double updated = original;
+
+    switch (expr.operator.type) {
+      case PLUS_PLUS: updated = original + 1; break;
+      case MINUS_MINUS: updated = original - 1; break;
+      default:
+        throw new RuntimeError(expr.operator,
+            "Unknown postfix operator.");
+    }
+    environment.assign(expr.variable.name, updated);
+    return original;
+  }
+
+  @Override
+  public Object visitPrefixExpr(Expr.Prefix expr) {
+    Object value = environment.get(expr.variable.name);
+    if (!(value instanceof Double)) {
+      throw new RuntimeError(expr.operator, "Operand must be a number.");
+    }
+
+    double current = (Double) value;
+    double updated = current;
+
+    switch (expr.operator.type) {
+      case PLUS_PLUS: updated = current + 1; break;
+      case MINUS_MINUS: updated = current - 1; break;
+      default:
+        throw new RuntimeError(expr.operator, "Unknown prefix operator.");
+    }
+    environment.assign(expr.variable.name, updated);
+    return updated;
   }
 
   @Override
