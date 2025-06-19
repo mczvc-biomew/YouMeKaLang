@@ -308,12 +308,30 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
+    resolve(expr.size);
+    return null;
+  }
+
+  @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     Map<String, Expr> values = ((Expr.ObjectLiteral)expr).properties;
     for (Map.Entry<String, Expr> entry : values.entrySet()) {
       resolve(entry.getValue());
     }
 
+    return null;
+  }
+
+  @Override
+  public Void visitPostfixExpr(Expr.Postfix expr) {
+    resolve(expr.variable);
+    return null;
+  }
+
+  @Override
+  public Void visitPrefixExpr(Expr.Prefix expr) {
+    resolve(expr.variable);
     return null;
   }
 
