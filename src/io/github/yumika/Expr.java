@@ -19,7 +19,10 @@ abstract class Expr {
     R visitListComprehensionExpr(ListComprehension expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
+    R visitNewTypedArrayExpr(NewTypedArray expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
+    R visitPostfixExpr(Postfix expr);
+    R visitPrefixExpr(Prefix expr);
     R visitSetExpr(Set expr);
     R visitSuperExpr(Super expr);
     R visitThisExpr(This expr);
@@ -228,6 +231,18 @@ abstract class Expr {
     final Expr right;
   }
 
+  static class NewTypedArray extends Expr {
+    NewTypedArray(Token type, Expr size) {
+      this.type = type;
+      this.size = size;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitNewTypedArrayExpr(this); }
+    final Token type;
+    final Expr size;
+  }
+
   static class ObjectLiteral extends Expr {
     ObjectLiteral(Map<String, Expr> properties) {
       this.properties = properties;
@@ -237,6 +252,31 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitObjectLiteralExpr(this); }
 
     final Map<String, Expr> properties;
+  }
+
+  static class Postfix extends Expr {
+    Postfix(Expr.Variable variable, Token operator) {
+      this.variable = variable;
+      this.operator = operator;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitPostfixExpr(this); }
+
+    final Expr.Variable variable;
+    final Token operator;
+  }
+
+  static class Prefix extends Expr {
+    Prefix(Expr.Variable variable, Token operator) {
+      this.variable = variable;
+      this.operator = operator;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitPrefixExpr(this); }
+    final Expr.Variable variable;
+    final Token operator;
   }
 
   static class Set extends Expr {
