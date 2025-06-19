@@ -183,8 +183,23 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
+    return parenthesize2("new", expr.type, expr.size);
+  }
+
+  @Override
   public String visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     return parenthesize2("{:}", expr.properties);
+  }
+
+  @Override
+  public String visitPostfixExpr(Expr.Postfix expr) {
+    return parenthesize2("postfix", expr.operator, expr.variable);
+  }
+
+  @Override
+  public String visitPrefixExpr(Expr.Prefix expr) {
+    return parenthesize2("prefix", expr.operator, expr.variable);
   }
 
   @Override
