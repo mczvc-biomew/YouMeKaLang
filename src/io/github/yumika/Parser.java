@@ -293,7 +293,7 @@ class Parser {
   }
 
   private Expr assignment() {
-    Expr expr = or();
+    Expr expr = postfix();
 
     if (match(EQUAL)) {
       Token equals = previous();
@@ -316,6 +316,21 @@ class Parser {
       }
       error(equals, "Invalid assignment target.");
     }
+    return expr;
+  }
+
+  private Expr postfix() {
+    Expr expr = or();
+
+    if (match(PLUS_PLUS, MINUS_MINUS)) {
+      Token operator = previous();
+      if (expr instanceof Expr.Variable) {
+        return new Expr.Postfix((Expr.Variable) expr, operator);
+      } else {
+        throw error(operator, "Only variables can be incremented or decremented.");
+      }
+    }
+
     return expr;
   }
 
@@ -392,9 +407,17 @@ class Parser {
   }
 
   private Expr unary() {
-    if (match(BANG, NOT, MINUS)) {
+    if (match(BANG, NOT, MINUS, MINUS_MINUS, PLUS_PLUS)) {
       Token operator = previous();
       Expr right = unary();
+
+      if (operator.type == MINUS_MINUS || operator.type == PLUS_PLUS) {
+        if (right instanceof Expr.Variable) {
+          return new Expr.Prefix((Expr.Variable) right, operator);
+        } else {
+          throw error(operator, "Only variables can be incremented or decremented.");
+        }
+      }
       return new Expr.Unary(operator, right);
     }
 
@@ -444,6 +467,8 @@ class Parser {
     if (match(TRUE)) return new Expr.Literal(true);
     if (match(NULL)) return new Expr.Literal(null);
     if (match(UNDEFINED)) return new Expr.Literal.Undefined();
+
+    if (match(NEW)) return newTypedArrayExpression();
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
@@ -565,6 +590,15 @@ class Parser {
       body = expression();
     }
     return new Expr.Lambda(parameters, body);
+  }
+
+  private Expr newTypedArrayExpression() {
+    Token type = consume(IDENTIFIER, "Expect type name after 'new'.");
+    consume(LEFT_BRACKET, "Expect '[' after type.");
+    Expr sizeExpr = expression();
+    consume(RIGHT_BRACKET, "Expect ']' after array size.");
+
+    return new Expr.NewTypedArray(type, sizeExpr);
   }
 
   private Expr objectLiteral() {
