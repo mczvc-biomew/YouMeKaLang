@@ -65,8 +65,15 @@ class Interpreter implements
       @Override
       public Object call(Interpreter interpreter, List<Object> arguments) {
         StringBuilder strBuilder = new StringBuilder();
+        boolean isEmpty = true;
         for (Object argument : arguments) {
           strBuilder.append(argument.toString()).append(" ");
+          if (isEmpty) {
+            isEmpty = false;
+          }
+        }
+        if (!isEmpty) {
+          strBuilder.deleteCharAt(strBuilder.length() - 1);
         }
         return strBuilder.toString();
       }
