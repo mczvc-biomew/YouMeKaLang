@@ -200,11 +200,17 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitArrayExpr(Expr.ArrayLiteral expr) {
+  public Void visitListLiteralExpr(Expr.ListLiteral expr) {
     if (expr.elements == null) return null;
     for (Expr element : expr.elements) {
       resolve(element);
     }
+    return null;
+  }
+
+  @Override
+  public Void visitSpreadExpr(Expr.Spread expr) {
+    resolve(expr.expression);
     return null;
   }
 
