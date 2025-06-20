@@ -8,9 +8,10 @@ enum TokenType {
   COMMA, COLON, DOT, MINUS, PLUS,
   PIPE, SEMICOLON, SLASH, STAR,
 
-  // One or two character tokens.
+  // One, two, or three character tokens.
   ARROW,
   BANG, BANG_EQUAL,
+  DOT_DOT_DOT,
   EQUAL, EQUAL_EQUAL,
   GREATER, GREATER_EQUAL,
   LESS, LESS_EQUAL,
