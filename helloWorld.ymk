@@ -16,7 +16,8 @@ print "";
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
 print "hw.hello is:";
-puts typeof(hw.hello); puts " that returns "; puts typeof(hw.hello()); print "";
+puts typeof(hw.hello); puts " that returns "; puts typeof(hw.hello());
+print "";
 
 
 // lambda
@@ -109,6 +110,9 @@ class c {
     }
 }
 class d < c {
+    init() {
+        print "Initializing: d";
+    }
     foo() {
         print "foo";
     }
@@ -118,7 +122,7 @@ print typeof(newC);
 newC.foo();
 d().foo();
 
-// // print typeof(newStrs);
+print typeof(newStrs) + "[" + str(length(newStrs)) + "]";
 // print true.__class__;
 print "";
 
