@@ -244,14 +244,33 @@ abstract class Expr {
   }
 
   static class ObjectLiteral extends Expr {
-    ObjectLiteral(Map<String, Expr> properties) {
+    ObjectLiteral(List<Property> properties) {
       this.properties = properties;
     }
 
     @Override
     <R> R accept(Visitor<R> visitor) { return visitor.visitObjectLiteralExpr(this); }
 
-    final Map<String, Expr> properties;
+    final List<Property> properties;
+
+    interface Property {}
+
+    static class Pair implements Property {
+      Pair(Token key, Expr value) {
+        this.key = key;
+        this.value = value;
+      }
+
+      final Token key;
+      final Expr value;
+    }
+
+    static class Spread implements Property {
+      Spread(Expr expression) {
+        this.expression = expression;
+      }
+      final Expr expression;
+    }
   }
 
   static class Postfix extends Expr {
@@ -352,7 +371,7 @@ abstract class Expr {
 
     @Override
     public String toString() {
-      return "<Variable: " + name.lexeme + "(" + name.literal + ")>";
+      return super.toString() + "_<Variable: " + name.lexeme + "(" + name.literal + ")>";
     }
   }
 
