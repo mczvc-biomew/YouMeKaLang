@@ -68,7 +68,13 @@ class Scanner {
       case '{': addToken(LEFT_BRACE); break;
       case '}': addToken(RIGHT_BRACE); break;
       case ',': addToken(COMMA); break;
-      case '.': addToken(DOT); break;
+      case '.':
+        if (match('.') && match('.')) {
+          addToken(DOT_DOT_DOT);
+        } else {
+          addToken(DOT);
+        }
+        break;
       case '|': addToken(PIPE); break;
       case ':': addToken(COLON); break;
       case ';': addToken(SEMICOLON); break;
