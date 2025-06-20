@@ -71,6 +71,25 @@ class Interpreter implements
         return strBuilder.toString();
       }
     });
+    globalEnv.define("length", new YmkCallable() {
+      @Override
+      public int arity() {
+        return 1;
+      }
+
+      @Override
+      public Object call(Interpreter interpreter, List<Object> arguments) {
+        if (arguments.get(0) instanceof List<?> list) {
+          return list.size();
+        } else if (arguments.get(0) instanceof String string) {
+          return string.length();
+        } else if (arguments.get(0) instanceof Map<?, ?> map) {
+          return map.size();
+        } else {
+          throw new RuntimeError(null, "Argument doesn't have a length.");
+        }
+      }
+    });
     globalEnv.define("clock", new YmkCallable() {
       @Override
       public int arity() { return 0; }
