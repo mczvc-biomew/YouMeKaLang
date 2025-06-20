@@ -201,6 +201,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitArrayExpr(Expr.ArrayLiteral expr) {
+    if (expr.elements == null) return null;
     for (Expr element : expr.elements) {
       resolve(element);
     }
@@ -315,9 +316,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
-    Map<String, Expr> values = ((Expr.ObjectLiteral)expr).properties;
-    for (Map.Entry<String, Expr> entry : values.entrySet()) {
-      resolve(entry.getValue());
+    List<Expr.ObjectLiteral.Property> props = ((Expr.ObjectLiteral)expr).properties;
+    if (props == null) return null;
+    for (Expr.ObjectLiteral.Property prop : props) {
+      if (prop instanceof Expr.ObjectLiteral.Pair pair) {
+        resolve(pair.value);
+      } else if (prop instanceof Expr.ObjectLiteral.Spread spread) {
+        resolve(spread.expression);
+      }
     }
 
     return null;
@@ -432,7 +438,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private void resolveLocal(Expr expr, Token name) {
     for (int i = scopes.size() - 1; i >= 0; i--) {
       if (scopes.get(i).containsKey(name.lexeme)) {
-        interpreter.resolve(expr, scopes.size() - 1 - i);
+        interpreter.resolve(expr, scopes.size() - i);
       }
     }
   }
