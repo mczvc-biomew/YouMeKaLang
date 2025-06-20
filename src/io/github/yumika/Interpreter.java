@@ -395,14 +395,24 @@ class Interpreter implements
   }
 
   @Override
-  public Object visitArrayExpr(Expr.ArrayLiteral expr) {
-    List<Object> elements = new ArrayList<>();
+  public Object visitListLiteralExpr(Expr.ListLiteral expr) {
+    List<Object> result = new ArrayList<>();
 
-    if (expr.elements == null) return elements;
+    if (expr.elements == null) return result;
     for (Expr element: expr.elements) {
-      elements.add(evaluate(element));
+      if (element instanceof Expr.Spread spread) {
+        Object spreadValue = evaluate(spread);
+        if (spreadValue instanceof List<?> list) {
+          result.addAll(list);
+        } else {
+          throw new RuntimeError(null,
+              "Spread target must be a list.");
+        }
+      } else {
+        result.add(evaluate(element));
+      }
     }
-    return elements;
+    return result;
   }
 
   @Override
@@ -827,6 +837,21 @@ class Interpreter implements
   }
 
   @Override
+  public Object visitSpreadExpr(Expr.Spread expr) {
+    List<Object> result;
+
+    resolveLogical(expr.expression, 0);
+    Object spreadValue = evaluate(expr.expression);
+    if (spreadValue instanceof List<?> list) {
+      result = new ArrayList<>(list);
+    } else {
+      throw new RuntimeError(
+          null, "Spread target must be a list.");
+    }
+    return result;
+  }
+
+  @Override
   public Object visitSuperExpr(Expr.Super expr) {
     int distance = locals.get(expr);
     YmkClass superclass = (YmkClass)environment.getAt(
@@ -936,6 +961,27 @@ class Interpreter implements
     return a.equals(b);
   }
 
+  private String stringify(List<?> list) {
+    StringBuilder sb = new StringBuilder();
+    boolean notEmpty = false;
+    sb.append("[");
+    for (Object element : list) {
+      if (element instanceof Double) {
+        sb.append(String.format("%s, ", element));
+      } else {
+        sb.append(String.format("\"%s\", ", element.toString()));
+      }
+      if (!notEmpty) {
+        notEmpty = true;
+      }
+    }
+    if (notEmpty) {
+      sb.delete(sb.length() - 2, sb.length());
+    }
+    sb.append("]");
+    return sb.toString();
+  }
+
   private String stringify(Object object) {
     if (object == null) return "null";
 
@@ -946,6 +992,8 @@ class Interpreter implements
       }
 
       return text;
+    } else if (object instanceof List<?> list) {
+      return stringify(list);
     }
 
     return object.toString();
