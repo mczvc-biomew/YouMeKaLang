@@ -57,9 +57,11 @@ var newStrs = new string[50];
 for (var i = 0; i < 50; i++ ) {
     newStrs[i] = "Hello World";
 }
-print newStrs;
+print ["hello"];
+print ["[Hello World]x50" for (x in newStrs) if x == ""];
 
 var i = 0;
+print i;
 print --i;
 print ++i;
 print i--;
@@ -83,13 +85,19 @@ fun swimmingFish() {
 }
 print "Swimming fish says: ";
 swimmingFish().swim("Splash!");
+var l = [1, 2];
+var m = [...l, 3];
+var n = [0, ...m, ...[4, 5, 6]];
+print n;
 print env();
 print "";
 
 print "# Types";
 print typeof(i);
 print typeof(|| "");
+print typeof([]);
 print typeof({});
+print typeof(true == false);
 print typeof([]) == typeof(new string[0]);
 print "";
 
@@ -113,6 +121,7 @@ d().foo();
 // print true.__class__;
 print "";
 
+print "# Comparison";
 var noReturn = || {};
 print "var noReturn = || {};";
 print "noReturn() == undefined:";
