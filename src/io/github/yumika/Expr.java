@@ -1,11 +1,9 @@
 package io.github.yumika;
 
 import java.util.List;
-import java.util.Map;
 
 abstract class Expr {
   interface Visitor<R> {
-    R visitArrayExpr(ArrayLiteral expr);
     R visitArrayAssignExpr(ArrayAssign expr);
     R visitArrayIndexExpr(ArrayIndex expr);
     R visitAssignExpr(Assign expr);
@@ -17,6 +15,7 @@ abstract class Expr {
     R visitGroupingExpr(Grouping expr);
     R visitLambdaExpr(Lambda expr);
     R visitListComprehensionExpr(ListComprehension expr);
+    R visitListLiteralExpr(ListLiteral expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
     R visitNewTypedArrayExpr(NewTypedArray expr);
@@ -24,6 +23,7 @@ abstract class Expr {
     R visitPostfixExpr(Postfix expr);
     R visitPrefixExpr(Prefix expr);
     R visitSetExpr(Set expr);
+    R visitSpreadExpr(Spread expr);
     R visitSuperExpr(Super expr);
     R visitThisExpr(This expr);
     R visitUnaryExpr(Unary expr);
@@ -31,15 +31,26 @@ abstract class Expr {
     R visitVariableExpr(Variable expr);
   }
 
-  static class ArrayLiteral extends Expr {
-    ArrayLiteral(List<Expr> elements) {
+  static class ListLiteral extends Expr {
+    ListLiteral(List<Expr> elements) {
       this.elements = elements;
     }
 
     @Override
-    <R> R accept(Visitor<R> visitor) { return visitor.visitArrayExpr(this); }
+    <R> R accept(Visitor<R> visitor) { return visitor.visitListLiteralExpr(this); }
 
     final List<Expr> elements;
+  }
+
+  static class Spread extends Expr {
+    Spread(Expr expression) {
+      this.expression = expression;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitSpreadExpr(this); }
+
+    final Expr expression;
   }
 
   static class ArrayIndex extends Expr {
