@@ -3,8 +3,6 @@ package io.github.yumika;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 import static io.github.yumika.TokenType.*;
 
@@ -496,36 +494,9 @@ class Parser {
 
     if (match(LEFT_BRACKET)) {
       if (match(RIGHT_BRACKET)) {
-        return new Expr.ArrayLiteral(null);
+        return new Expr.ListLiteral(null);
       }
-      Expr element = expression();
-
-      if (match(FOR)) {
-        consume(LEFT_PAREN, "Expect '(' after 'for'.");
-        Token variable = consume(IDENTIFIER, "Expect identifier");
-        consume(IN, "Expect 'in'");
-        Expr iterable = expression();
-        consume(RIGHT_PAREN, "Expect ')'");
-        Expr condition = null;
-        if (match(IF)) {
-          condition = expression();
-        }
-        consume(RIGHT_BRACKET, "Expect ']' after list comprehension");
-
-        return new Expr.ListComprehension(element, variable, iterable, condition);
-      } else {
-        List<Expr> elements = new ArrayList<>();
-        if (!check(RIGHT_BRACKET)) {
-          do {
-            element = element != null ? element : expression();
-            elements.add(element);
-            element = null;
-          } while (match(COMMA));
-        }
-
-        consume(RIGHT_BRACKET, "Expect ']' after array elements.");
-        return new Expr.ArrayLiteral(elements);
-      }
+      return listLiteral();
     }
     if (match(LEFT_BRACE)) {
       if (match(RIGHT_BRACE)) {
@@ -615,6 +586,71 @@ class Parser {
     consume(RIGHT_BRACKET, "Expect ']' after array size.");
 
     return new Expr.NewTypedArray(type, sizeExpr);
+  }
+
+  private Expr listComprehension() {
+    Expr element = expression();
+
+    if (match(FOR)) {
+      consume(LEFT_PAREN, "Expect '(' after 'for'.");
+      Token variable = consume(IDENTIFIER, "Expect identifier");
+
+      consume(IN, "Expect 'in'");
+
+      Expr iterable = expression();
+      consume(RIGHT_PAREN, "Expect ')'");
+
+      Expr condition = null;
+      if (match(IF)) {
+        condition = expression();
+      }
+      consume(RIGHT_BRACKET, "Expect ']' after list comprehension");
+
+      return new Expr.ListComprehension(element, variable, iterable, condition);
+    } else {
+      List<Expr> elements = new ArrayList<>();
+      elements.add(element);
+      if (!check(RIGHT_BRACKET)) {
+        do {
+          if (match((DOT_DOT_DOT))) {
+//            Expr spreadExpr = expression();
+            if (element == null) {
+              elements.add(new Expr.Spread(expression()));
+            }
+          } else {
+            if (element == null) {
+              elements.add(expression());
+            }
+          }
+          element = null;
+        } while (match(COMMA));
+      }
+
+      consume(RIGHT_BRACKET, "Expect ']' after array elements.");
+      return new Expr.ListLiteral(elements);
+    }
+  }
+
+  private Expr listLiteral() {
+    if (check(DOT_DOT_DOT)) {
+      List<Expr> elements = new ArrayList<>();
+      if (!check(RIGHT_BRACKET)) {
+        do {
+          if (match((DOT_DOT_DOT))) {
+            Expr spreadExpr = expression();
+            elements.add(new Expr.Spread(spreadExpr));
+          } else {
+            elements.add(expression());
+          }
+        } while (match(COMMA));
+      }
+
+      consume(RIGHT_BRACKET, "Expect ']' after array elements.");
+      return new Expr.ListLiteral(elements);
+    } else {
+      return listComprehension();
+    }
+
   }
 
   private Expr objectLiteral() {
