@@ -468,7 +468,7 @@ class Parser {
     if (match(NULL)) return new Expr.Literal(null);
     if (match(UNDEFINED)) return new Expr.Literal.Undefined();
 
-    if (match(NEW)) return newTypedArrayExpression();
+    if (match(NEW)) return newObject();
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
@@ -495,6 +495,9 @@ class Parser {
     }
 
     if (match(LEFT_BRACKET)) {
+      if (match(RIGHT_BRACKET)) {
+        return new Expr.ArrayLiteral(null);
+      }
       Expr element = expression();
 
       if (match(FOR)) {
@@ -525,7 +528,10 @@ class Parser {
       }
     }
     if (match(LEFT_BRACE)) {
-      if (match(IDENTIFIER) || match(STRING)) {
+      if (match(RIGHT_BRACE)) {
+        return new Expr.ObjectLiteral(null);
+      }
+      if (match(DOT_DOT_DOT) || match(IDENTIFIER) || match(STRING)) {
         return objectLiteral();
       }
     }
@@ -592,8 +598,18 @@ class Parser {
     return new Expr.Lambda(parameters, body);
   }
 
+  private Expr newObject() {
+    Token klass = consume(IDENTIFIER, "Expect class name");
+    if (check(LEFT_BRACKET)) {
+      return newTypedArrayExpression();
+    } else {
+      // @TODO: implement new class operator
+      return null;
+    }
+  }
+
   private Expr newTypedArrayExpression() {
-    Token type = consume(IDENTIFIER, "Expect type name after 'new'.");
+    Token type = previous();// consume(IDENTIFIER, "Expect type name after 'new'.");
     consume(LEFT_BRACKET, "Expect '[' after type.");
     Expr sizeExpr = expression();
     consume(RIGHT_BRACKET, "Expect ']' after array size.");
@@ -602,19 +618,27 @@ class Parser {
   }
 
   private Expr objectLiteral() {
-    Map<String, Expr> properties = new HashMap<>();
+    List<Expr.ObjectLiteral.Property> properties = new ArrayList<>();
+
     Token key = previous();
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      if (key == null) {
-        if (match(IDENTIFIER) || match(STRING)) {
-          key = previous();
-        } else {
-          throw new RuntimeError(key, "Expect property name.");
+      if (checkPrevious(DOT_DOT_DOT) || match(DOT_DOT_DOT)) {
+        Expr spreadExpr = expression();
+        properties.add(new Expr.ObjectLiteral.Spread(spreadExpr));
+      } else if (check(COLON) || check(IDENTIFIER) || check(STRING)) {
+        if (key == null) {
+          if (match(IDENTIFIER) || match(STRING)) {
+            key = previous();
+          } else {
+            throw new RuntimeError(key, "Expect property name.");
+          }
         }
-      }
-      consume(COLON, "Expect ':' after property name.");
-      Expr value = expression();
-      properties.put(key.lexeme, value);
+        consume(COLON, "Expect ':' after property name.");
+        Expr value = expression();
+        properties.add(new Expr.ObjectLiteral.Pair(key, value));
+      } //else {
+//        throw error(peek(), "Expect property name.");
+//      }
       key = null;
       if (!match(COMMA))
         break;
@@ -643,6 +667,11 @@ class Parser {
   private boolean check(TokenType type) {
     if (isAtEnd()) return false;
     return peek().type == type;
+  }
+
+  private boolean checkPrevious(TokenType type) {
+    if (isAtEnd()) return false;
+    return previous().type == type;
   }
 
   private Token advance() {
