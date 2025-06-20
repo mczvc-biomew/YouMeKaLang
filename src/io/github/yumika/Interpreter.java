@@ -474,9 +474,8 @@ class Interpreter implements
       map.put(key, value);
 
       return value;
-    } else if (arrayOrMapOrObjInstance instanceof YmkInstance) {
+    } else if (arrayOrMapOrObjInstance instanceof YmkInstance instance) {
       String key = ((String) index);
-      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
       instance.set(key, value);
 
       return value;
