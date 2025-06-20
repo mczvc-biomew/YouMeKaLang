@@ -15,6 +15,8 @@ print "";
 
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
+print "hw.hello is:";
+puts typeof(hw.hello); puts " that returns "; puts typeof(hw.hello()); print "";
 
 
 // lambda
@@ -63,6 +65,52 @@ print ++i;
 print i--;
 print i++;
 print i;
+print "";
+
+print "# Spread";
+fun swimmer() {
+    return {
+        swim: |fish| { print fish; }
+    };
+}
+
+fun swimmingFish() {
+    var obj = { name: "fish" };
+    print obj;
+//    puts "SwimmingFish::ENV: ";
+//    print env();
+    return { ...obj, x: "hello", ...swimmer() };
+}
+print "Swimming fish says: ";
+swimmingFish().swim("Splash!");
+print env();
+print "";
+
+print "# Types";
+print typeof(i);
+print typeof(|| "");
+print typeof({});
+print typeof([]) == typeof(new string[0]);
+print "";
+
+print "# Class";
+class c {
+    foo() {
+        print "c::foo()";
+    }
+}
+class d < c {
+    foo() {
+        print "foo";
+    }
+}
+var newC = c();
+print typeof(newC);
+newC.foo();
+d().foo();
+
+// // print typeof(newStrs);
+// print true.__class__;
 print "";
 
 var noReturn = || {};
