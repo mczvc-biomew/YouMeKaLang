@@ -58,7 +58,8 @@ for (var i = 0; i < 50; i++ ) {
     newStrs[i] = "Hello World";
 }
 print ["hello"];
-print ["[Hello World]x50" for (x in newStrs) if x == ""];
+puts str(["[Hello World]"]) + "x";
+print length(newStrs);
 
 var i = 0;
 print i;
