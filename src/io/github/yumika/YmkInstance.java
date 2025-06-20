@@ -30,8 +30,11 @@ class YmkInstance {
     return get(name.lexeme);
   }
 
+  Map<String, Object> getFields() { return fields; }
+
   void set(Token name, Object value) { fields.put(name.lexeme, value); }
   void set(String name, Object value) { fields.put(name, value); }
+  void putAll(Map<String, Object> map) { fields.putAll(map); }
 
   @Override
   public String toString() { return klass.name + " instance = " + fields; }
