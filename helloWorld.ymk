@@ -54,6 +54,33 @@ print solution;
 print HelloWorld();
 print "";
 
+
+print "# Functions";
+
+fun caller(g) {
+  g();
+  // g should be a function, not nulll.
+  print g == null; // expect: false
+}
+
+fun callCaller() {
+  var capturedVar = "before";
+  var a = "a";
+
+  print capturedVar;
+
+  fun f() {
+    capturedVar = "after";
+
+    print capturedVar;
+  }
+
+  caller(f);
+}
+
+callCaller();
+print "";
+
 var newStrs = new string[50];
 for (var i = 0; i < 50; i++ ) {
     newStrs[i] = "Hello World";
@@ -69,6 +96,8 @@ print ++i;
 print i--;
 print i++;
 print i;
+var j = i + 42;
+print j;
 print "";
 
 print "# Spread";
@@ -124,6 +153,7 @@ d().foo();
 
 print typeof(newStrs) + "[" + str(length(newStrs)) + "]";
 // print true.__class__;
+
 print "";
 
 print "# Comparison";
@@ -131,6 +161,16 @@ var noReturn = || {};
 print "var noReturn = || {};";
 print "noReturn() == undefined:";
 print noReturn() == undefined;
+print "[] == {}";
+print [] == {};
+print "[] == []";
+print [] == [];
+var test = [];
+["test"];
+print test;
 print "print noReturn;";
-print noReturn;
+print str(noReturn) + " == " + str("noReturn" == "noReturn");
+(noReturn = false) or (noReturn = true);
+print "noReturn = " + str(noReturn);
+
 print !true == not true;
