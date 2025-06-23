@@ -15,11 +15,13 @@ class Scanner {
     keywords.put("and", AND);
     keywords.put("as", AS);
     keywords.put("case", CASE);
+    keywords.put("catch", CATCH);
     keywords.put("class", CLASS);
     keywords.put("else", ELSE);
     keywords.put("false", FALSE);
     keywords.put("fun", FUN);
     keywords.put("for", FOR);
+    keywords.put("get", GET);
     keywords.put("if", IF);
     keywords.put("import", IMPORT);
     keywords.put("in", IN);
@@ -30,9 +32,11 @@ class Scanner {
     keywords.put("print", PRINT);
     keywords.put("puts", PUTS);
     keywords.put("return", RETURN);
+    keywords.put("set", SET);
     keywords.put("super", SUPER);
     keywords.put("this", THIS);
     keywords.put("true", TRUE);
+    keywords.put("try", TRY);
     keywords.put("undefined", UNDEFINED);
     keywords.put("var", VAR);
     keywords.put("when", WHEN);
@@ -81,10 +85,18 @@ class Scanner {
       case '*': addToken(STAR); break;
       // two-char-tokens
       case '-':
-        addToken(match('-') ? MINUS_MINUS : MINUS);
+        if (match('=')) {
+          addToken(MINUS_EQUAL);
+        } else {
+          addToken(match('-') ? MINUS_MINUS : MINUS);
+        }
         break;
       case '+':
-        addToken(match('+') ? PLUS_PLUS : PLUS);
+        if (match('=')) {
+          addToken(PLUS_EQUAL);
+        } else {
+          addToken(match('+') ? PLUS_PLUS : PLUS);
+        }
         break;
       case '!':
         addToken(match('=') ? BANG_EQUAL : BANG);
