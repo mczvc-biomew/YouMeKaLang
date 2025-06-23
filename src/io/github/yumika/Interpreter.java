@@ -148,8 +148,16 @@ class Interpreter implements
 
   // Resolving and Binding resolve
   void resolve(Expr expr, int depth) { locals.put(expr, depth); }
+  boolean resolveStmt(Stmt stmt, int depth) {
+    if (stmt instanceof Stmt.Return returnStmt) {
+      if (returnStmt.value instanceof Expr) {
+        return resolveLogical(returnStmt.value,  depth);
+      }
+    }
+    return false;
+  }
   boolean resolveLogical(Expr expr, int depth) {
-    if (expr instanceof Expr.Variable) {
+    if (expr instanceof Expr.Variable || expr instanceof Expr.This) {
       resolve(expr, depth);
       return true;
     }
@@ -159,6 +167,17 @@ class Interpreter implements
       return leftResult || rightReult;
     } else if (expr instanceof Expr.Unary) {
       return resolveLogical(((Expr.Unary) expr).right, depth);
+    } else if (expr instanceof Expr.Function function) {
+      boolean funcResult = true;
+      for (Stmt funcStmts : function.body) {
+        funcResult = resolveStmt(funcStmts, depth);
+//        funcResult |= resolveLogical(funcStmts, depth);
+      }
+      return funcResult;
+    } else if (expr instanceof Expr.Get getExpr) {
+      boolean getResult = true;
+      getResult |= resolveLogical(getExpr.object, depth);
+      return getResult;
     }
 
     return false;
@@ -355,7 +374,7 @@ class Interpreter implements
 
     YmkClass moduleKlass = new YmkClass("Module", null, new HashMap<>());
     YmkInstance namespace = new YmkInstance(moduleKlass);
-    moduleEnv.forEach((k, v) -> namespace.set(k, v));
+    moduleEnv.forEach((k, v) -> namespace.set(k, v, this));
     environment.define(aliasName, namespace);
 
     return null;
@@ -476,7 +495,7 @@ class Interpreter implements
       return value;
     } else if (arrayOrMapOrObjInstance instanceof YmkInstance instance) {
       String key = ((String) index);
-      instance.set(key, value);
+      instance.set(key, value, this);
 
       return value;
     }
@@ -524,7 +543,7 @@ class Interpreter implements
         throw new RuntimeError(expr.bracket,
             "Object doesn't contain field: " + key);
       }
-      return instance.get(key);
+      return instance.get(key, this);
     }
     throw new RuntimeError(expr.bracket, "Cannot recognize object type.");
   }
@@ -660,6 +679,34 @@ class Interpreter implements
   }
 
   @Override
+  public Object visitCompoundAssignExpr(Expr.CompoundAssign expr) {
+    Object oldValue = environment.get(expr.name);
+    Object right = evaluate(expr.value);
+
+    if (!(oldValue instanceof Double) || !(right instanceof Double)) {
+      throw new RuntimeError(expr.operator, "Operands must be numbers.");
+    }
+
+    double left = (Double) oldValue;
+    double rightValue = (Double) right;
+    double result;
+
+    switch (expr.operator.type) {
+      case PLUS_EQUAL -> result = left + rightValue;
+      case MINUS_EQUAL -> result = left - rightValue;
+      default -> throw new RuntimeError(expr.operator, "Unknown compound assignment.");
+    }
+
+    environment.assign(expr.name, result);
+    return result;
+  }
+
+  @Override
+  public Object visitFunctionExpr(Expr.Function expr) {
+    return new YmkFunction(expr, environment, false);
+  }
+
+  @Override
   public Object visitGetExpr(Expr.Get expr) {
     if (expr.object instanceof Expr.This) {
       resolve(expr.object, 0);
@@ -673,7 +720,7 @@ class Interpreter implements
     }
 
     if (object instanceof YmkInstance) {
-      return ((YmkInstance) object).get(expr.name);
+      return ((YmkInstance) object).get(expr.name, this);
     }
 
     if (object instanceof Map) {
@@ -783,16 +830,16 @@ class Interpreter implements
         Object value = evaluate(pair.value);
         if (value instanceof YmkLambda lambda) {
           lambda = lambda.bind(self);
-          self.set(pair.key, lambda);
+          self.set(pair.key, lambda, this);
         } else {
-          self.set(pair.key, value);
+          self.set(pair.key, value, this);
         }
       } else if (prop instanceof Expr.ObjectLiteral.Spread spread) {
         resolveLogical(spread.expression, 0);
         Object spreadValue = evaluate(spread.expression);
         if (spreadValue instanceof Map<?, ?> map) {
           for (Map.Entry<?, ?> entry : map.entrySet()) {
-            self.set(entry.getKey().toString(), entry.getValue());
+            self.set(entry.getKey().toString(), entry.getValue(), this);
           }
         } else if (spreadValue instanceof YmkInstance instance) {
           self.putAll(instance.getFields());
@@ -800,6 +847,15 @@ class Interpreter implements
           throw new RuntimeError(
               spread.expression instanceof Expr.Variable v ? v.name : null,
               "Spread target must be an object or map.");
+        }
+      } else if (prop instanceof Expr.ObjectLiteral.Accessor accessor) {
+        YmkFunction fn = new YmkFunction(accessor.function, environment, false);
+        resolveLogical(accessor.function, 1);
+        fn = fn.bind(self);
+        if (accessor.kind.type == TokenType.GET) {
+          self.defineGetter(accessor.name.lexeme, fn);
+        } else {
+          self.defineSetter(accessor.name.lexeme, fn);
         }
       }
     }
@@ -857,7 +913,7 @@ class Interpreter implements
     }
 
     Object value = evaluate(expr.value);
-    ((YmkInstance)object).set(expr.name, value);
+    ((YmkInstance)object).set(expr.name, value, this);
     return value;
   }
 
