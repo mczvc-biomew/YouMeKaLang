@@ -5,7 +5,13 @@ import java.util.List;
 import java.util.Map;
 
 class YmkFunction implements YmkCallable {
-  private final Stmt.Function declaration;
+  private final String name;
+  private final List<Token> params;
+  private final List<Stmt> body;
+  final boolean hasVarArgs;
+  final boolean hasVarKwargs;
+  final Token varArgsName;
+  final Token kwArgsName;
   private final Environment closure;
 
   private final boolean isInitializer;
@@ -15,67 +21,96 @@ class YmkFunction implements YmkCallable {
     this.isInitializer = isInitializer;
     // closure-constructor
     this.closure = closure;
-    this.declaration = declaration;
+    this.name = declaration.name.lexeme;
+    this.params = declaration.params;
+    this.body = declaration.body;
+    this.hasVarArgs = declaration.hasVarArgs;
+    this.hasVarKwargs = declaration.hasVarKwargs;
+    this.varArgsName = declaration.varArgsName;
+    this.kwArgsName = declaration.kwArgsName;
+  }
+
+  YmkFunction(Expr.Function expression, Environment closure,  boolean isInitializer) {
+    this.name = null;
+    this.params = expression.params;
+    this.body = expression.body;
+    this.closure = closure;
+    this.isInitializer = isInitializer;
+    this.hasVarArgs = expression.hasVarArgs;
+    this.hasVarKwargs = expression.hasVarKwargs;
+    this.varArgsName = expression.varArgsName;
+    this.kwArgsName = expression.kwArgsName;
   }
 
   YmkFunction bind(YmkInstance instance) {
     Environment environment = new Environment(closure);
     environment.define("this", instance);
 
-    return new YmkFunction(declaration, environment,
-        isInitializer);
+    return new YmkFunction(this, environment);
+  }
+
+  private YmkFunction(YmkFunction original, Environment closure) {
+    this.name = original.name;
+    this.params = original.params;
+    this.body = original.body;
+    this.isInitializer = original.isInitializer;
+    this.closure = closure;
+    this.hasVarArgs = original.hasVarArgs;
+    this.hasVarKwargs = original.hasVarKwargs;
+    this.varArgsName = original.varArgsName;
+    this.kwArgsName = original.kwArgsName;
   }
 
   @Override
-  public String toString() { return "<fn " + declaration.name.lexeme + ">"; }
+  public String toString() { return "<fn " + this.name + ">"; }
 
   @Override
-  public int arity() { return declaration.params.size(); }
+  public int arity() { return params.size(); }
 
   // function-call
   @Override
   public Object call(Interpreter interpreter,
                      List<Object> arguments) {
     Environment environment = new Environment(closure);
-    int normalParamCount = declaration.params.size();
+    int normalParamCount = params.size();
     // standard args
     // Normal arguments
     for (int i = 0; i < normalParamCount && i < arguments.size(); i++) {
-      environment.define(declaration.params.get(i).lexeme,
+      environment.define(params.get(i).lexeme,
           arguments.get(i));
     }
 
-    if (declaration.hasVarArgs && declaration.varArgsName == null) {
+    if (hasVarArgs && varArgsName == null) {
       throw new RuntimeError(null,
           "Must have var args name.");
     }
-    if (declaration.hasVarKwargs && declaration.kwArgsName == null) {
+    if (hasVarKwargs && kwArgsName == null) {
       throw new RuntimeError(null,
           "Must have kwargs name.");
     }
 
     // *args
-    if (declaration.hasVarArgs) {
+    if (hasVarArgs) {
       List<Object> varArgs = new ArrayList<>();
       for (int i = normalParamCount; i < arguments.size(); i++) {
         varArgs.add(arguments.get(i));
       }
 
-      environment.define(declaration.varArgsName.lexeme, varArgs);
+      environment.define(varArgsName.lexeme, varArgs);
     }
 
     // **kwargs (last arg is expected to be Map<String, Object>)
-    if (declaration.hasVarKwargs) {
+    if (hasVarKwargs) {
       Object lastArg = arguments.get(arguments.size() - 1);
       if (!(lastArg instanceof Map)) {
-        throw new RuntimeError(declaration.varArgsName,
+        throw new RuntimeError(varArgsName,
             "**kwargs must be passed as map.");
       }
-      environment.define(declaration.kwArgsName.lexeme, lastArg);
+      environment.define(kwArgsName.lexeme, lastArg);
     }
 
     try {
-      interpreter.executeBlock(declaration.body, environment);
+      interpreter.executeBlock(body, environment);
 
     // catch-return
     } catch (Return returnValue) {
