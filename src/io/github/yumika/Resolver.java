@@ -267,6 +267,20 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitCompoundAssignExpr(Expr.CompoundAssign expr) {
+    resolveLocal(expr, expr.name);
+    resolve(expr.value);
+
+    return null;
+  }
+
+  @Override
+  public Void visitFunctionExpr(Expr.Function expr) {
+    resolveFunction(expr, FunctionType.FUNCTION);
+    return null;
+  }
+
+  @Override
   public Void visitGetExpr(Expr.Get expr) {
     resolve(expr.object);
     return null;
@@ -418,6 +432,21 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     resolve(function.body);
     endScope();
     // restore-current-function
+    currentFunction = enclosingFunction;
+  }
+
+  private void resolveFunction(Expr.Function function, FunctionType type) {
+    FunctionType enclosingFunction = currentFunction;
+    currentFunction = type;
+
+    beginScope();
+    for (Token param : function.params) {
+      declare(param);
+      define(param);
+    }
+    resolve(function.body);
+    endScope();
+
     currentFunction = enclosingFunction;
   }
 
