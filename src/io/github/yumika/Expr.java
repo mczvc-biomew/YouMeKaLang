@@ -11,6 +11,8 @@ abstract class Expr {
     R visitBlockExpr(Block expr);
     R visitCaseExpr(Case expr);
     R visitCallExpr(Call expr);
+    R visitCompoundAssignExpr(CompoundAssign expr);
+    R visitFunctionExpr(Function expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
     R visitLambdaExpr(Lambda expr);
@@ -166,6 +168,53 @@ abstract class Expr {
     }
   }
 
+  static class CompoundAssign extends Expr {
+    CompoundAssign(Token name, Token operator, Expr value) {
+      this.name = name;
+      this.operator = operator;
+      this.value = value;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitCompoundAssignExpr(this); }
+
+    final Token name;
+    final Token operator;
+    final Expr value;
+  }
+
+  static class Function extends Expr {
+    Function(List<Token> params, List<Stmt> body) {
+      this.params = params;
+      this.body = body;
+      this.hasVarArgs = false;
+      this.hasVarKwargs = false;
+      this.varArgsName = null;
+      this.kwArgsName = null;
+    }
+
+    Function(List<Token> params, List<Stmt> body,
+             boolean hasVarArgs, boolean hasVarKwargs,
+             Token varArgsName, Token kwArgsName) {
+      this.params = params;
+      this.body = body;
+      this.hasVarArgs = hasVarArgs;
+      this.hasVarKwargs = hasVarKwargs;
+      this.varArgsName = varArgsName;
+      this.kwArgsName = kwArgsName;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitFunctionExpr(this); }
+
+    final List<Token> params;
+    final List<Stmt> body;
+    final boolean hasVarArgs;
+    final boolean hasVarKwargs;
+    final Token varArgsName;
+    final Token kwArgsName;
+  }
+
   static class Get extends Expr {
     Get(Expr object, Token name) {
       this.object = object;
@@ -281,6 +330,18 @@ abstract class Expr {
         this.expression = expression;
       }
       final Expr expression;
+    }
+
+    static class Accessor implements Property {
+      Accessor(Token kind, Token name, Expr.Function function) {
+        this.kind = kind;
+        this.name = name;
+        this.function = function;
+      }
+
+      final Token kind;
+      final Token name;
+      final Expr.Function function;
     }
   }
 
