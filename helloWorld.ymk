@@ -59,7 +59,7 @@ print "# Functions";
 
 fun caller(g) {
   g();
-  // g should be a function, not nulll.
+  // g should be a function, not null.
   print g == null; // expect: false
 }
 
@@ -79,6 +79,8 @@ fun callCaller() {
 }
 
 callCaller();
+print "fun () { return 42; }";
+print fun () { return 42; };
 print "";
 
 var newStrs = new string[50];
@@ -88,7 +90,9 @@ for (var i = 0; i < 50; i++ ) {
 print ["hello"];
 puts str(["[Hello World]"]) + "x";
 print length(newStrs);
+print "";
 
+print "# Postfix & Prefix";
 var i = 0;
 print i;
 print --i;
@@ -98,6 +102,15 @@ print i++;
 print i;
 var j = i + 42;
 print j;
+print "";
+
+print "# Compound assignment";
+var j = 0;
+puts str(j) + ", ";
+j += 1;
+puts str(j) + ", ";
+j -= 1;
+print str(j);
 print "";
 
 print "# Spread";
@@ -112,7 +125,15 @@ fun swimmingFish() {
     print obj;
 //    puts "SwimmingFish::ENV: ";
 //    print env();
-    return { ...obj, x: "hello", ...swimmer() };
+    return { ...obj,
+        x: 42,
+        get x() {
+            return this.x;
+        },
+        set x(val) {
+            this.x = val;
+        },
+        ...swimmer() };
 }
 print "Swimming fish says: ";
 swimmingFish().swim("Splash!");
@@ -121,6 +142,10 @@ var m = [...l, 3];
 var n = [0, ...m, ...[4, 5, 6]];
 print n;
 print env();
+var obj = swimmingFish();
+print obj.x;
+obj.x = 100;
+print obj.x;
 print "";
 
 print "# Types";
@@ -155,6 +180,7 @@ print typeof(newStrs) + "[" + str(length(newStrs)) + "]";
 // print true.__class__;
 
 print "";
+
 
 print "# Comparison";
 var noReturn = || {};
