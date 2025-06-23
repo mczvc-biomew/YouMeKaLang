@@ -1,11 +1,14 @@
 package io.github.yumika;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class YmkInstance {
   private YmkClass klass;
   private final Map<String, Object> fields = new HashMap<>();
+  private final Map<String, YmkFunction> getters = new HashMap<>();
+  private final Map<String, YmkFunction> setters = new HashMap<>();
 
   YmkInstance(YmkClass klass) { this.klass = klass; }
 
@@ -13,10 +16,11 @@ class YmkInstance {
     return fields.containsKey(name);
   }
 
-  Object get(String name) {
+  Object get(String name, Interpreter interpreter) {
     if (fields.containsKey(name)) {
       return fields.get(name);
     }
+    if (getters.containsKey(name)) return getters.get(name).call(interpreter, List.of());
 
     YmkFunction method = klass.findMethod(name);
 
@@ -26,15 +30,29 @@ class YmkInstance {
         "Undefined property '" + name + "'.");
   }
 
-  Object get(Token name) {
-    return get(name.lexeme);
+  Object get(Token name, Interpreter interpreter) {
+    return get(name.lexeme, interpreter);
   }
 
   Map<String, Object> getFields() { return fields; }
 
-  void set(Token name, Object value) { fields.put(name.lexeme, value); }
-  void set(String name, Object value) { fields.put(name, value); }
+  void set(Token name, Object value, Interpreter interpreter) { set(name.lexeme, value, interpreter); }
+  void set(String name, Object value, Interpreter interpreter) {
+    if (setters.containsKey(name)) {
+      setters.get(name).call(interpreter, List.of(value));
+    } else {
+      fields.put(name, value);
+    }
+  }
   void putAll(Map<String, Object> map) { fields.putAll(map); }
+
+  void defineGetter(String name, YmkFunction fn) {
+    getters.put(name, fn);
+  }
+
+  void defineSetter(String name, YmkFunction fn) {
+    setters.put(name, fn);
+  }
 
   @Override
   public String toString() { return klass.name + " instance = " + fields; }
