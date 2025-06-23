@@ -293,17 +293,20 @@ class Parser {
   private Expr assignment() {
     Expr expr = postfix();
 
-    if (match(EQUAL)) {
-      Token equals = previous();
+    if (match(EQUAL, MINUS_EQUAL, PLUS_EQUAL)) {
+      Token operator = previous();
       Expr value = assignment();
 
-      if (expr instanceof Expr.Variable) {
-        Token name = ((Expr.Variable)expr).name;
-        return new Expr.Assign(name, value);
+      if (expr instanceof Expr.Variable varExpr) {
+        if (operator.type == EQUAL) {
+          return new Expr.Assign(varExpr.name, value);
+        } else {
+          return new Expr.CompoundAssign(varExpr.name, operator, value);
+        }
       } else if (expr instanceof Expr.ArrayIndex) {
         Expr array = ((Expr.ArrayIndex)expr).array;
         if (!(array instanceof Expr.Variable)) {
-          throw new RuntimeError(equals, "Expect array variable.");
+          throw new RuntimeError(operator, "Expect array variable.");
         }
         Token name = ((Expr.Variable)array).name;
         Expr index = ((Expr.ArrayIndex)expr).index;
@@ -312,7 +315,7 @@ class Parser {
         Expr.Get get = (Expr.Get)expr;
         return new Expr.Set(get.object, get.name, value);
       }
-      error(equals, "Invalid assignment target.");
+      error(operator, "Invalid assignment target.");
     }
     return expr;
   }
@@ -466,6 +469,8 @@ class Parser {
     if (match(NULL)) return new Expr.Literal(null);
     if (match(UNDEFINED)) return new Expr.Literal.Undefined();
 
+    if (match(FUN)) return functionExpression("function");
+
     if (match(NEW)) return newObject();
 
     if (match(NUMBER, STRING)) {
@@ -502,9 +507,7 @@ class Parser {
       if (match(RIGHT_BRACE)) {
         return new Expr.ObjectLiteral(null);
       }
-      if (match(DOT_DOT_DOT) || match(IDENTIFIER) || match(STRING)) {
-        return objectLiteral();
-      }
+      return objectLiteral();
     }
 
     if (match(CASE)) return caseExpression();
@@ -541,6 +544,22 @@ class Parser {
 
     consume(RIGHT_BRACE, "Expect '}' after case expression.");
     return new Expr.Case(caseExpr, whenClauses, elseBranch);
+  }
+
+  private Expr functionExpression(String kind) {
+    consume(LEFT_PAREN, "Expect '(' after '" + kind + "'.");
+    List<Token> parameters = new ArrayList<>();
+    if (!check(RIGHT_PAREN)) {
+      do {
+        parameters.add(consume(IDENTIFIER,
+            "Expect parameter name."));
+      } while (match(COMMA));
+    }
+    consume(RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    List<Stmt> body = block();
+    return new Expr.Function(parameters, body);
+
   }
 
   private Expr lambda() {
@@ -656,26 +675,37 @@ class Parser {
   private Expr objectLiteral() {
     List<Expr.ObjectLiteral.Property> properties = new ArrayList<>();
 
-    Token key = previous();
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      if (checkPrevious(DOT_DOT_DOT) || match(DOT_DOT_DOT)) {
+      if (match(DOT_DOT_DOT)) {
         Expr spreadExpr = expression();
         properties.add(new Expr.ObjectLiteral.Spread(spreadExpr));
-      } else if (check(COLON) || check(IDENTIFIER) || check(STRING)) {
-        if (key == null) {
-          if (match(IDENTIFIER) || match(STRING)) {
-            key = previous();
-          } else {
-            throw new RuntimeError(key, "Expect property name.");
-          }
-        }
+      } else if (match(IDENTIFIER) || match(STRING)) {
+        Token key = previous();
         consume(COLON, "Expect ':' after property name.");
         Expr value = expression();
         properties.add(new Expr.ObjectLiteral.Pair(key, value));
-      } //else {
-//        throw error(peek(), "Expect property name.");
-//      }
-      key = null;
+      } else if (match(GET, SET)) {
+        Token accessorType = previous();
+        Token name = consume(IDENTIFIER,
+            "Expect property name after 'get' or 'set'");
+        consume(LEFT_PAREN, "Expect '(' after property name.");
+
+        List<Token> parameters = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+          do {
+            parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+          } while (match(COMMA));
+        }
+        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+        consume(LEFT_BRACE, "Expect '{' before accessor body.");
+        List<Stmt> body = block();
+
+        Expr.Function function = new Expr.Function(parameters, body);
+        properties.add(new Expr.ObjectLiteral.Accessor(accessorType, name, function));
+      } else {
+        throw error(peek(), "Expect property name.");
+      }
       if (!match(COMMA))
         break;
     }
