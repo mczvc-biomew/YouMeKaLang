@@ -106,11 +106,11 @@ abstract class Stmt {
 
     final Token name;
     final List<Token> params;
+    final List<Stmt> body;
     final boolean hasVarArgs;
     final boolean hasVarKwargs;
     final Token varArgsName;
     final Token kwArgsName;
-    final List<Stmt> body;
   }
 
   static class If extends Stmt {

@@ -200,10 +200,17 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
-  public Void visitArrayExpr(Expr.ArrayLiteral expr) {
+  public Void visitListLiteralExpr(Expr.ListLiteral expr) {
+    if (expr.elements == null) return null;
     for (Expr element : expr.elements) {
       resolve(element);
     }
+    return null;
+  }
+
+  @Override
+  public Void visitSpreadExpr(Expr.Spread expr) {
+    resolve(expr.expression);
     return null;
   }
 
@@ -256,6 +263,20 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
       resolve(expr.elseBranch);
     }
 
+    return null;
+  }
+
+  @Override
+  public Void visitCompoundAssignExpr(Expr.CompoundAssign expr) {
+    resolveLocal(expr, expr.name);
+    resolve(expr.value);
+
+    return null;
+  }
+
+  @Override
+  public Void visitFunctionExpr(Expr.Function expr) {
+    resolveFunction(expr, FunctionType.FUNCTION);
     return null;
   }
 
@@ -315,9 +336,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
-    Map<String, Expr> values = ((Expr.ObjectLiteral)expr).properties;
-    for (Map.Entry<String, Expr> entry : values.entrySet()) {
-      resolve(entry.getValue());
+    List<Expr.ObjectLiteral.Property> props = ((Expr.ObjectLiteral)expr).properties;
+    if (props == null) return null;
+    for (Expr.ObjectLiteral.Property prop : props) {
+      if (prop instanceof Expr.ObjectLiteral.Pair pair) {
+        resolve(pair.value);
+      } else if (prop instanceof Expr.ObjectLiteral.Spread spread) {
+        resolve(spread.expression);
+      }
     }
 
     return null;
@@ -409,6 +435,21 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     currentFunction = enclosingFunction;
   }
 
+  private void resolveFunction(Expr.Function function, FunctionType type) {
+    FunctionType enclosingFunction = currentFunction;
+    currentFunction = type;
+
+    beginScope();
+    for (Token param : function.params) {
+      declare(param);
+      define(param);
+    }
+    resolve(function.body);
+    endScope();
+
+    currentFunction = enclosingFunction;
+  }
+
   private void beginScope() { scopes.push(new HashMap<String, Boolean>()); }
   private void endScope() { scopes.pop(); }
   private void declare(Token name) {
@@ -432,7 +473,7 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   private void resolveLocal(Expr expr, Token name) {
     for (int i = scopes.size() - 1; i >= 0; i--) {
       if (scopes.get(i).containsKey(name.lexeme)) {
-        interpreter.resolve(expr, scopes.size() - 1 - i);
+        interpreter.resolve(expr, scopes.size() - i);
       }
     }
   }

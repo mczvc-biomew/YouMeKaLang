@@ -32,6 +32,30 @@ class Interpreter implements
   void initGlobalDefinitions(Environment globalEnv) {
     globalEnv.define("undefined", new YmkUndefined());
     globalEnv.define("env", new YmkEnv());
+    globalEnv.define("typeof", new YmkCallable() {
+      @Override
+      public int arity() {
+        return 1;
+      }
+
+      @Override
+      public Object call(Interpreter interpreter, List<Object> arguments) {
+        Object value = arguments.get(0);
+
+        return getTypeName(value);
+      }
+
+      @Override
+      public String toString() {
+        return "<native fn typeof>";
+      }
+    });
+    globalEnv.define("isNumber", isTypeOf(Double.class));
+    globalEnv.define("isString", isTypeOf(String.class));
+    globalEnv.define("isBoolean", isTypeOf(Boolean.class));
+    globalEnv.define("isArray", isTypeOf(List.class));
+    globalEnv.define("isFunction", isTypeOfFunction());
+    globalEnv.define("isObject", isTypeOf(YmkInstance.class));
     globalEnv.define("str", new YmkCallable() {
       @Override
       public int arity() {
@@ -41,10 +65,36 @@ class Interpreter implements
       @Override
       public Object call(Interpreter interpreter, List<Object> arguments) {
         StringBuilder strBuilder = new StringBuilder();
+        boolean isEmpty = true;
         for (Object argument : arguments) {
           strBuilder.append(argument.toString()).append(" ");
+          if (isEmpty) {
+            isEmpty = false;
+          }
+        }
+        if (!isEmpty) {
+          strBuilder.deleteCharAt(strBuilder.length() - 1);
         }
         return strBuilder.toString();
+      }
+    });
+    globalEnv.define("length", new YmkCallable() {
+      @Override
+      public int arity() {
+        return 1;
+      }
+
+      @Override
+      public Object call(Interpreter interpreter, List<Object> arguments) {
+        if (arguments.get(0) instanceof List<?> list) {
+          return list.size();
+        } else if (arguments.get(0) instanceof String string) {
+          return string.length();
+        } else if (arguments.get(0) instanceof Map<?, ?> map) {
+          return map.size();
+        } else {
+          throw new RuntimeError(null, "Argument doesn't have a length.");
+        }
       }
     });
     globalEnv.define("clock", new YmkCallable() {
@@ -98,8 +148,16 @@ class Interpreter implements
 
   // Resolving and Binding resolve
   void resolve(Expr expr, int depth) { locals.put(expr, depth); }
+  boolean resolveStmt(Stmt stmt, int depth) {
+    if (stmt instanceof Stmt.Return returnStmt) {
+      return resolveLogical(returnStmt.value,  depth);
+    } else if (stmt instanceof Stmt.Expression expressionStmt) {
+      return resolveLogical(expressionStmt.expression, depth);
+    }
+    return false;
+  }
   boolean resolveLogical(Expr expr, int depth) {
-    if (expr instanceof Expr.Variable) {
+    if (expr instanceof Expr.Variable || expr instanceof Expr.This) {
       resolve(expr, depth);
       return true;
     }
@@ -109,6 +167,21 @@ class Interpreter implements
       return leftResult || rightReult;
     } else if (expr instanceof Expr.Unary) {
       return resolveLogical(((Expr.Unary) expr).right, depth);
+    } else if (expr instanceof Expr.Function function) {
+      boolean funcResult = true;
+      for (Stmt funcStmts : function.body) {
+        funcResult = resolveStmt(funcStmts, depth);
+      }
+      return funcResult;
+    } else if (expr instanceof Expr.Get getExpr) {
+      boolean getResult = true;
+      getResult |= resolveLogical(getExpr.object, depth);
+      return getResult;
+    } else if (expr instanceof Expr.Set setExpr) {
+      boolean setResult = true;
+      setResult |= resolveLogical(setExpr.object, depth);
+      setResult |= resolveLogical(setExpr.value, depth);
+      return setResult;
     }
 
     return false;
@@ -136,6 +209,44 @@ class Interpreter implements
     } finally {
       this.environment = previous;
     }
+  }
+
+  private YmkCallable isTypeOf(Class<?> cls) {
+    return new YmkCallable() {
+      @Override
+      public int arity() {
+        return 1;
+      }
+
+      @Override
+      public Object call(Interpreter interpreter, List<Object> args) {
+        return cls.isInstance(args.get(0));
+      }
+
+      @Override
+      public String toString() {
+        return "<native fn is" + cls.getSimpleName() + ">";
+      }
+    };
+  }
+
+  private YmkCallable isTypeOfFunction() {
+    return new YmkCallable() {
+      @Override
+      public int arity() {
+        return 1;
+      }
+
+      @Override
+      public Object call(Interpreter interpreter, List<Object> args) {
+        return args.get(0) instanceof YmkCallable || args.get(0) instanceof YmkFunction;
+      }
+
+      @Override
+      public String toString() {
+        return "<native fn is Function>";
+      }
+    };
   }
 
   @Override
@@ -267,7 +378,7 @@ class Interpreter implements
 
     YmkClass moduleKlass = new YmkClass("Module", null, new HashMap<>());
     YmkInstance namespace = new YmkInstance(moduleKlass);
-    moduleEnv.forEach((k, v) -> namespace.set(k, v));
+    moduleEnv.forEach((k, v) -> namespace.set(k, v, this));
     environment.define(aliasName, namespace);
 
     return null;
@@ -333,12 +444,24 @@ class Interpreter implements
   }
 
   @Override
-  public Object visitArrayExpr(Expr.ArrayLiteral expr) {
-    List<Object> elements = new ArrayList<>();
+  public Object visitListLiteralExpr(Expr.ListLiteral expr) {
+    List<Object> result = new ArrayList<>();
+
+    if (expr.elements == null) return result;
     for (Expr element: expr.elements) {
-      elements.add(evaluate(element));
+      if (element instanceof Expr.Spread spread) {
+        Object spreadValue = evaluate(spread);
+        if (spreadValue instanceof List<?> list) {
+          result.addAll(list);
+        } else {
+          throw new RuntimeError(null,
+              "Spread target must be a list.");
+        }
+      } else {
+        result.add(evaluate(element));
+      }
     }
-    return elements;
+    return result;
   }
 
   @Override
@@ -374,10 +497,9 @@ class Interpreter implements
       map.put(key, value);
 
       return value;
-    } else if (arrayOrMapOrObjInstance instanceof YmkInstance) {
+    } else if (arrayOrMapOrObjInstance instanceof YmkInstance instance) {
       String key = ((String) index);
-      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
-      instance.set(key, value);
+      instance.set(key, value, this);
 
       return value;
     }
@@ -418,14 +540,14 @@ class Interpreter implements
       }
 
       return map.get(key);
-    } else if (arrayOrMapOrObjInstance instanceof YmkInstance) {
-      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
+    } else if (arrayOrMapOrObjInstance instanceof YmkInstance instance) {
+//      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
       String key = ((String) index);
       if (!instance.containsField(key)) {
         throw new RuntimeError(expr.bracket,
             "Object doesn't contain field: " + key);
       }
-      return instance.get(key);
+      return instance.get(key, this);
     }
     throw new RuntimeError(expr.bracket, "Cannot recognize object type.");
   }
@@ -483,7 +605,6 @@ class Interpreter implements
         if (expr.left instanceof Expr.Variable && expr.right instanceof Expr.Variable) {
           Object leftVar = evaluate((Expr)expr.left);
           Object rightVar = evaluate((Expr)expr.right);
-          System.out.println(leftVar + " " + rightVar);
           if (leftVar instanceof String && rightVar instanceof String) {
             return (String)leftVar + (String)rightVar;
           }
@@ -562,20 +683,56 @@ class Interpreter implements
   }
 
   @Override
+  public Object visitCompoundAssignExpr(Expr.CompoundAssign expr) {
+    Object oldValue = environment.get(expr.name);
+    Object right = evaluate(expr.value);
+
+    if (!(oldValue instanceof Double) || !(right instanceof Double)) {
+      throw new RuntimeError(expr.operator, "Operands must be numbers.");
+    }
+
+    double left = (Double) oldValue;
+    double rightValue = (Double) right;
+    double result;
+
+    switch (expr.operator.type) {
+      case PLUS_EQUAL -> result = left + rightValue;
+      case MINUS_EQUAL -> result = left - rightValue;
+      default -> throw new RuntimeError(expr.operator, "Unknown compound assignment.");
+    }
+
+    environment.assign(expr.name, result);
+    return result;
+  }
+
+  @Override
+  public Object visitFunctionExpr(Expr.Function expr) {
+    return new YmkFunction(expr, environment, false);
+  }
+
+  @Override
   public Object visitGetExpr(Expr.Get expr) {
     if (expr.object instanceof Expr.This) {
-      resolve(expr.object, 0);
+      resolve(expr.object, 1);
     }
 
     Object object = evaluate(expr.object);
+
+    // @TODO: implement this functionality
+    if ("__class__".equals(expr.name.lexeme)) {
+      return getTypeName(object);
+    }
+
     if (object instanceof YmkInstance) {
-      return ((YmkInstance) object).get(expr.name);
+      return ((YmkInstance) object).get(expr.name, this);
     }
 
     if (object instanceof Map) {
       Object getValue = ((Map<String, Object>)object).get(expr.name.lexeme);
       return  getValue;
     }
+
+    if (object == null) return null;
 
     throw new RuntimeError(expr.name,
         "Only instances have properties.");
@@ -672,13 +829,40 @@ class Interpreter implements
     YmkClass objectLiteralKlass = new YmkClass("Object", null, new HashMap<>());
     YmkInstance self = new YmkInstance(objectLiteralKlass);
 
-    for (Map.Entry<String, Expr> entry : expr.properties.entrySet()) {
-      Object value = evaluate(entry.getValue());
-      if (value instanceof YmkLambda lambda) {
-        lambda = lambda.bind(self);
-        self.set(entry.getKey(), lambda);
-      } else {
-        self.set(entry.getKey(), value);
+    if (expr.properties == null) return self;
+
+    for (Expr.ObjectLiteral.Property prop : expr.properties) {
+      if (prop instanceof Expr.ObjectLiteral.Pair pair) {
+        Object value = evaluate(pair.value);
+        if (value instanceof YmkLambda lambda) {
+          lambda = lambda.bind(self);
+          self.set(pair.key, lambda, this);
+        } else {
+          self.set(pair.key, value, this);
+        }
+      } else if (prop instanceof Expr.ObjectLiteral.Spread spread) {
+        resolveLogical(spread.expression, 0);
+        Object spreadValue = evaluate(spread.expression);
+        if (spreadValue instanceof Map<?, ?> map) {
+          for (Map.Entry<?, ?> entry : map.entrySet()) {
+            self.set(entry.getKey().toString(), entry.getValue(), this);
+          }
+        } else if (spreadValue instanceof YmkInstance instance) {
+          self.putAll(instance.getFields());
+        } else {
+          throw new RuntimeError(
+              spread.expression instanceof Expr.Variable v ? v.name : null,
+              "Spread target must be an object or map.");
+        }
+      } else if (prop instanceof Expr.ObjectLiteral.Accessor accessor) {
+        YmkFunction fn = new YmkFunction(accessor.function, environment, false);
+        resolveLogical(accessor.function, 1);
+        fn = fn.bind(self);
+        if (accessor.kind.type == TokenType.GET) {
+          self.defineGetter(accessor.name.lexeme, fn);
+        } else {
+          self.defineSetter(accessor.name.lexeme, fn);
+        }
       }
     }
     return self;
@@ -735,8 +919,23 @@ class Interpreter implements
     }
 
     Object value = evaluate(expr.value);
-    ((YmkInstance)object).set(expr.name, value);
+    ((YmkInstance)object).set(expr.name, value, this);
     return value;
+  }
+
+  @Override
+  public Object visitSpreadExpr(Expr.Spread expr) {
+    List<Object> result;
+
+    resolveLogical(expr.expression, 0);
+    Object spreadValue = evaluate(expr.expression);
+    if (spreadValue instanceof List<?> list) {
+      result = new ArrayList<>(list);
+    } else {
+      throw new RuntimeError(
+          null, "Spread target must be a list.");
+    }
+    return result;
   }
 
   @Override
@@ -759,7 +958,9 @@ class Interpreter implements
   }
 
   @Override
-  public Object visitThisExpr(Expr.This expr) { return lookUpVariable(expr.keyword, expr); }
+  public Object visitThisExpr(Expr.This expr) {
+    return lookUpVariable(expr.keyword, expr);
+  }
 
   @Override
   public Object visitUnaryExpr(Expr.Unary expr) {
@@ -824,6 +1025,18 @@ class Interpreter implements
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
+  private String getTypeName(Object value) {
+    if (value == null) return "null";
+    if (value instanceof Double) return "Number";
+    if (value instanceof String) return "String";
+    if (value instanceof Boolean) return "Boolean";
+    if (value instanceof List<?>) return "Array";
+    if (value instanceof YmkLambda || value instanceof YmkFunction) return "Function";
+    if (value instanceof YmkInstance) return "Object";
+
+    return "Unknown";
+  }
+
   private boolean isTruthy(Object object) {
     if (object == null) return false;
     if (object instanceof Boolean) return (boolean)object;
@@ -837,6 +1050,27 @@ class Interpreter implements
     return a.equals(b);
   }
 
+  private String stringify(List<?> list) {
+    StringBuilder sb = new StringBuilder();
+    boolean notEmpty = false;
+    sb.append("[");
+    for (Object element : list) {
+      if (element instanceof Double) {
+        sb.append(String.format("%s, ", element));
+      } else {
+        sb.append(String.format("\"%s\", ", element.toString()));
+      }
+      if (!notEmpty) {
+        notEmpty = true;
+      }
+    }
+    if (notEmpty) {
+      sb.delete(sb.length() - 2, sb.length());
+    }
+    sb.append("]");
+    return sb.toString();
+  }
+
   private String stringify(Object object) {
     if (object == null) return "null";
 
@@ -847,6 +1081,8 @@ class Interpreter implements
       }
 
       return text;
+    } else if (object instanceof List<?> list) {
+      return stringify(list);
     }
 
     return object.toString();

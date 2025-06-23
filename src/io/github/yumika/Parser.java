@@ -3,8 +3,6 @@ package io.github.yumika;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 import static io.github.yumika.TokenType.*;
 
@@ -295,17 +293,20 @@ class Parser {
   private Expr assignment() {
     Expr expr = postfix();
 
-    if (match(EQUAL)) {
-      Token equals = previous();
+    if (match(EQUAL, MINUS_EQUAL, PLUS_EQUAL)) {
+      Token operator = previous();
       Expr value = assignment();
 
-      if (expr instanceof Expr.Variable) {
-        Token name = ((Expr.Variable)expr).name;
-        return new Expr.Assign(name, value);
+      if (expr instanceof Expr.Variable varExpr) {
+        if (operator.type == EQUAL) {
+          return new Expr.Assign(varExpr.name, value);
+        } else {
+          return new Expr.CompoundAssign(varExpr.name, operator, value);
+        }
       } else if (expr instanceof Expr.ArrayIndex) {
         Expr array = ((Expr.ArrayIndex)expr).array;
         if (!(array instanceof Expr.Variable)) {
-          throw new RuntimeError(equals, "Expect array variable.");
+          throw new RuntimeError(operator, "Expect array variable.");
         }
         Token name = ((Expr.Variable)array).name;
         Expr index = ((Expr.ArrayIndex)expr).index;
@@ -314,7 +315,7 @@ class Parser {
         Expr.Get get = (Expr.Get)expr;
         return new Expr.Set(get.object, get.name, value);
       }
-      error(equals, "Invalid assignment target.");
+      error(operator, "Invalid assignment target.");
     }
     return expr;
   }
@@ -468,7 +469,9 @@ class Parser {
     if (match(NULL)) return new Expr.Literal(null);
     if (match(UNDEFINED)) return new Expr.Literal.Undefined();
 
-    if (match(NEW)) return newTypedArrayExpression();
+    if (match(FUN)) return functionExpression("function");
+
+    if (match(NEW)) return newObject();
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
@@ -495,39 +498,16 @@ class Parser {
     }
 
     if (match(LEFT_BRACKET)) {
-      Expr element = expression();
-
-      if (match(FOR)) {
-        consume(LEFT_PAREN, "Expect '(' after 'for'.");
-        Token variable = consume(IDENTIFIER, "Expect identifier");
-        consume(IN, "Expect 'in'");
-        Expr iterable = expression();
-        consume(RIGHT_PAREN, "Expect ')'");
-        Expr condition = null;
-        if (match(IF)) {
-          condition = expression();
-        }
-        consume(RIGHT_BRACKET, "Expect ']' after list comprehension");
-
-        return new Expr.ListComprehension(element, variable, iterable, condition);
-      } else {
-        List<Expr> elements = new ArrayList<>();
-        if (!check(RIGHT_BRACKET)) {
-          do {
-            element = element != null ? element : expression();
-            elements.add(element);
-            element = null;
-          } while (match(COMMA));
-        }
-
-        consume(RIGHT_BRACKET, "Expect ']' after array elements.");
-        return new Expr.ArrayLiteral(elements);
+      if (match(RIGHT_BRACKET)) {
+        return new Expr.ListLiteral(null);
       }
+      return listLiteral();
     }
     if (match(LEFT_BRACE)) {
-      if (match(IDENTIFIER) || match(STRING)) {
-        return objectLiteral();
+      if (match(RIGHT_BRACE)) {
+        return new Expr.ObjectLiteral(null);
       }
+      return objectLiteral();
     }
 
     if (match(CASE)) return caseExpression();
@@ -566,6 +546,22 @@ class Parser {
     return new Expr.Case(caseExpr, whenClauses, elseBranch);
   }
 
+  private Expr functionExpression(String kind) {
+    consume(LEFT_PAREN, "Expect '(' after '" + kind + "'.");
+    List<Token> parameters = new ArrayList<>();
+    if (!check(RIGHT_PAREN)) {
+      do {
+        parameters.add(consume(IDENTIFIER,
+            "Expect parameter name."));
+      } while (match(COMMA));
+    }
+    consume(RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+    List<Stmt> body = block();
+    return new Expr.Function(parameters, body);
+
+  }
+
   private Expr lambda() {
     List<Token> parameters = new ArrayList<>();
     // Handle |x| ...
@@ -592,8 +588,18 @@ class Parser {
     return new Expr.Lambda(parameters, body);
   }
 
+  private Expr newObject() {
+    Token klass = consume(IDENTIFIER, "Expect class name");
+    if (check(LEFT_BRACKET)) {
+      return newTypedArrayExpression();
+    } else {
+      // @TODO: implement new class operator
+      return null;
+    }
+  }
+
   private Expr newTypedArrayExpression() {
-    Token type = consume(IDENTIFIER, "Expect type name after 'new'.");
+    Token type = previous();// consume(IDENTIFIER, "Expect type name after 'new'.");
     consume(LEFT_BRACKET, "Expect '[' after type.");
     Expr sizeExpr = expression();
     consume(RIGHT_BRACKET, "Expect ']' after array size.");
@@ -601,21 +607,105 @@ class Parser {
     return new Expr.NewTypedArray(type, sizeExpr);
   }
 
-  private Expr objectLiteral() {
-    Map<String, Expr> properties = new HashMap<>();
-    Token key = previous();
-    while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      if (key == null) {
-        if (match(IDENTIFIER) || match(STRING)) {
-          key = previous();
-        } else {
-          throw new RuntimeError(key, "Expect property name.");
-        }
+  private Expr listComprehension() {
+    Expr element = expression();
+
+    if (match(FOR)) {
+      consume(LEFT_PAREN, "Expect '(' after 'for'.");
+      Token variable = consume(IDENTIFIER, "Expect identifier");
+
+      consume(IN, "Expect 'in'");
+
+      Expr iterable = expression();
+      consume(RIGHT_PAREN, "Expect ')'");
+
+      Expr condition = null;
+      if (match(IF)) {
+        condition = expression();
       }
-      consume(COLON, "Expect ':' after property name.");
-      Expr value = expression();
-      properties.put(key.lexeme, value);
-      key = null;
+      consume(RIGHT_BRACKET, "Expect ']' after list comprehension");
+
+      return new Expr.ListComprehension(element, variable, iterable, condition);
+    } else {
+      List<Expr> elements = new ArrayList<>();
+      elements.add(element);
+      if (!check(RIGHT_BRACKET)) {
+        do {
+          if (match((DOT_DOT_DOT))) {
+//            Expr spreadExpr = expression();
+            if (element == null) {
+              elements.add(new Expr.Spread(expression()));
+            }
+          } else {
+            if (element == null) {
+              elements.add(expression());
+            }
+          }
+          element = null;
+        } while (match(COMMA));
+      }
+
+      consume(RIGHT_BRACKET, "Expect ']' after array elements.");
+      return new Expr.ListLiteral(elements);
+    }
+  }
+
+  private Expr listLiteral() {
+    if (check(DOT_DOT_DOT)) {
+      List<Expr> elements = new ArrayList<>();
+      if (!check(RIGHT_BRACKET)) {
+        do {
+          if (match((DOT_DOT_DOT))) {
+            Expr spreadExpr = expression();
+            elements.add(new Expr.Spread(spreadExpr));
+          } else {
+            elements.add(expression());
+          }
+        } while (match(COMMA));
+      }
+
+      consume(RIGHT_BRACKET, "Expect ']' after array elements.");
+      return new Expr.ListLiteral(elements);
+    } else {
+      return listComprehension();
+    }
+
+  }
+
+  private Expr objectLiteral() {
+    List<Expr.ObjectLiteral.Property> properties = new ArrayList<>();
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      if (match(DOT_DOT_DOT)) {
+        Expr spreadExpr = expression();
+        properties.add(new Expr.ObjectLiteral.Spread(spreadExpr));
+      } else if (match(IDENTIFIER) || match(STRING)) {
+        Token key = previous();
+        consume(COLON, "Expect ':' after property name.");
+        Expr value = expression();
+        properties.add(new Expr.ObjectLiteral.Pair(key, value));
+      } else if (match(GET, SET)) {
+        Token accessorType = previous();
+        Token name = consume(IDENTIFIER,
+            "Expect property name after 'get' or 'set'");
+        consume(LEFT_PAREN, "Expect '(' after property name.");
+
+        List<Token> parameters = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+          do {
+            parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+          } while (match(COMMA));
+        }
+        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+        consume(LEFT_BRACE, "Expect '{' before accessor body.");
+        List<Stmt> body = block();
+
+        Expr.Function function = new Expr.Function(parameters, body);
+        properties.add(new Expr.ObjectLiteral.Accessor(accessorType, name, function));
+      } else {
+        throw error(peek(), "Expect property name.");
+      }
       if (!match(COMMA))
         break;
     }
@@ -643,6 +733,11 @@ class Parser {
   private boolean check(TokenType type) {
     if (isAtEnd()) return false;
     return peek().type == type;
+  }
+
+  private boolean checkPrevious(TokenType type) {
+    if (isAtEnd()) return false;
+    return previous().type == type;
   }
 
   private Token advance() {

@@ -15,6 +15,9 @@ print "";
 
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
+print "hw.hello is:";
+puts typeof(hw.hello); puts " that returns "; puts typeof(hw.hello());
+print "";
 
 
 // lambda
@@ -51,24 +54,149 @@ print solution;
 print HelloWorld();
 print "";
 
+
+print "# Functions";
+
+fun caller(g) {
+  g();
+  // g should be a function, not null.
+  print g == null; // expect: false
+}
+
+fun callCaller() {
+  var capturedVar = "before";
+  var a = "a";
+
+  print capturedVar;
+
+  fun f() {
+    capturedVar = "after";
+
+    print capturedVar;
+  }
+
+  caller(f);
+}
+
+callCaller();
+print "fun () { return 42; }";
+print fun () { return 42; };
+print "";
+
 var newStrs = new string[50];
 for (var i = 0; i < 50; i++ ) {
     newStrs[i] = "Hello World";
 }
-print newStrs;
+print ["hello"];
+puts str(["[Hello World]"]) + "x";
+print length(newStrs);
+print "";
 
+print "# Postfix & Prefix";
 var i = 0;
+print i;
 print --i;
 print ++i;
 print i--;
 print i++;
 print i;
+var j = i + 42;
+print j;
 print "";
 
+print "# Compound assignment";
+var j = 0;
+puts str(j) + ", ";
+j += 1;
+puts str(j) + ", ";
+j -= 1;
+print str(j);
+print "";
+
+print "# Spread";
+fun swimmer() {
+    return {
+        swim: |fish| { print fish; }
+    };
+}
+
+fun swimmingFish() {
+    var obj = { name: "fish" };
+    print obj;
+//    puts "SwimmingFish::ENV: ";
+//    print env();
+    return { ...obj,
+        _x: 42,
+        get x() {
+            return this._x;
+        },
+        set x(val) {
+            this._x = val - 58;
+        },
+        ...swimmer() };
+}
+print "Swimming fish says: ";
+swimmingFish().swim("Splash!");
+var l = [1, 2];
+var m = [...l, 3];
+var n = [0, ...m, ...[4, 5, 6]];
+print n;
+print env();
+var obj = swimmingFish();
+print obj.x;
+obj.x = 100; // expects 42 (!!)
+print obj.x;
+print "";
+
+print "# Types";
+print typeof(i);
+print typeof(|| "");
+print typeof([]);
+print typeof({});
+print typeof(true == false);
+print typeof([]) == typeof(new string[0]);
+print "";
+
+print "# Class";
+class c {
+    foo() {
+        print "c::foo()";
+    }
+}
+class d < c {
+    init() {
+        print "Initializing: d";
+    }
+    foo() {
+        print "foo";
+    }
+}
+var newC = c();
+print typeof(newC);
+newC.foo();
+d().foo();
+
+print typeof(newStrs) + "[" + str(length(newStrs)) + "]";
+// print true.__class__;
+
+print "";
+
+
+print "# Comparison";
 var noReturn = || {};
 print "var noReturn = || {};";
 print "noReturn() == undefined:";
 print noReturn() == undefined;
+print "[] == {}";
+print [] == {};
+print "[] == []";
+print [] == [];
+var test = [];
+["test"];
+print test;
 print "print noReturn;";
-print noReturn;
+print str(noReturn) + " == " + str("noReturn" == "noReturn");
+(noReturn = false) or (noReturn = true);
+print "noReturn = " + str(noReturn);
+
 print !true == not true;

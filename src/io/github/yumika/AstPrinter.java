@@ -115,7 +115,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   public String visitWhileStmt(Stmt.While stmt) { return parenthesize2("while", stmt.condition, stmt.body); }
 
   @Override
-  public String visitArrayExpr(Expr.ArrayLiteral expr) { return parenthesize2("[]", expr.elements); }
+  public String visitListLiteralExpr(Expr.ListLiteral expr) { return parenthesize2("[]", expr.elements); }
 
   @Override
   public String visitArrayAssignExpr(Expr.ArrayAssign expr) {
@@ -153,6 +153,16 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     }
     builder.append(")");
     return builder.toString();
+  }
+
+  @Override
+  public String visitCompoundAssignExpr(Expr.CompoundAssign expr) {
+    return parenthesize2(expr.name.lexeme, expr.operator.lexeme, expr.value);
+  }
+
+  @Override
+  public String visitFunctionExpr(Expr.Function expr) {
+    return parenthesize2("function expr", expr.params, expr.hasVarArgs, expr.kwArgsName, expr.varArgsName, expr.kwArgsName);
   }
 
   @Override
@@ -206,6 +216,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   public String visitSetExpr(Expr.Set expr) {
     return parenthesize2("=",
         expr.object, expr.name.lexeme, expr.value);
+  }
+
+  @Override
+  public String visitSpreadExpr(Expr.Spread expr) {
+    return parenthesize("spread", expr.expression);
   }
 
   @Override
@@ -280,7 +295,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
             new Token(TokenType.VAR, "x", 'x', 1)
         ),
         new Token(TokenType.VAR, "x", 'x', 1),
-        new Expr.ArrayLiteral(elements),
+        new Expr.ListLiteral(elements),
         new Expr.Binary(
             new Expr.Literal("1"),
             new Token(TokenType.LESS, "<", "<", 1),
