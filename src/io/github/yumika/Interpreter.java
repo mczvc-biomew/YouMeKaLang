@@ -150,9 +150,9 @@ class Interpreter implements
   void resolve(Expr expr, int depth) { locals.put(expr, depth); }
   boolean resolveStmt(Stmt stmt, int depth) {
     if (stmt instanceof Stmt.Return returnStmt) {
-      if (returnStmt.value instanceof Expr) {
-        return resolveLogical(returnStmt.value,  depth);
-      }
+      return resolveLogical(returnStmt.value,  depth);
+    } else if (stmt instanceof Stmt.Expression expressionStmt) {
+      return resolveLogical(expressionStmt.expression, depth);
     }
     return false;
   }
@@ -171,13 +171,17 @@ class Interpreter implements
       boolean funcResult = true;
       for (Stmt funcStmts : function.body) {
         funcResult = resolveStmt(funcStmts, depth);
-//        funcResult |= resolveLogical(funcStmts, depth);
       }
       return funcResult;
     } else if (expr instanceof Expr.Get getExpr) {
       boolean getResult = true;
       getResult |= resolveLogical(getExpr.object, depth);
       return getResult;
+    } else if (expr instanceof Expr.Set setExpr) {
+      boolean setResult = true;
+      setResult |= resolveLogical(setExpr.object, depth);
+      setResult |= resolveLogical(setExpr.value, depth);
+      return setResult;
     }
 
     return false;
@@ -709,7 +713,7 @@ class Interpreter implements
   @Override
   public Object visitGetExpr(Expr.Get expr) {
     if (expr.object instanceof Expr.This) {
-      resolve(expr.object, 0);
+      resolve(expr.object, 1);
     }
 
     Object object = evaluate(expr.object);
@@ -727,6 +731,8 @@ class Interpreter implements
       Object getValue = ((Map<String, Object>)object).get(expr.name.lexeme);
       return  getValue;
     }
+
+    if (object == null) return null;
 
     throw new RuntimeError(expr.name,
         "Only instances have properties.");
@@ -952,7 +958,9 @@ class Interpreter implements
   }
 
   @Override
-  public Object visitThisExpr(Expr.This expr) { return lookUpVariable(expr.keyword, expr); }
+  public Object visitThisExpr(Expr.This expr) {
+    return lookUpVariable(expr.keyword, expr);
+  }
 
   @Override
   public Object visitUnaryExpr(Expr.Unary expr) {
