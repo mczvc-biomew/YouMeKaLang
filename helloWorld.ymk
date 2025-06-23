@@ -126,12 +126,12 @@ fun swimmingFish() {
 //    puts "SwimmingFish::ENV: ";
 //    print env();
     return { ...obj,
-        x: 42,
+        _x: 42,
         get x() {
-            return this.x;
+            return this._x;
         },
         set x(val) {
-            this.x = val;
+            this._x = val - 58;
         },
         ...swimmer() };
 }
@@ -144,7 +144,7 @@ print n;
 print env();
 var obj = swimmingFish();
 print obj.x;
-obj.x = 100;
+obj.x = 100; // expects 42 (!!)
 print obj.x;
 print "";
 
