@@ -15,6 +15,11 @@ puts list.get(0) + " ";
 import java.lang.Math;
 print Math.pow(15, 1) * 2;
 
+puts "Full name: ";
+var {name, middle = "Corrales", last} = { name: "Luqas Matt", last: "Noces" };
+print name + " " + middle + " " + last;
+print "";
+
 import modules.helloWorld as hw;
 
 print "Start";
