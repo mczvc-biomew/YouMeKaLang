@@ -15,6 +15,14 @@ class Environment {
   boolean contains(String name) {
     return values.containsKey(name);
   }
+  int containsAt(String name, int distance) {
+    int index = distance;
+    while (!ancestor(distance, name).values.containsKey(name)) {
+      index = containsAt(name, distance + 1);
+      if (index >= 64) return -1;
+    }
+    return index;
+  }
 
   Object get(Token name) {
     if (values.containsKey(name.lexeme)) {
