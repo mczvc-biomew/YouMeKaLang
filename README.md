@@ -7,6 +7,7 @@
 * Lambda function (syntax like Ruby; not function arrows), getters & setters
 * Class (Object oriented programming)
 * If, Case conditional expressions + (and, or, not binary operators)
+* Try / Catch error handling, (throw exceptions)!
 * Array, Number, Boolean, String Literals
 * Python-like list comprehension
 * Object Literals
