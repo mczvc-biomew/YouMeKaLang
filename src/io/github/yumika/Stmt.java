@@ -129,7 +129,8 @@ abstract class Stmt {
   }
 
   static class Import extends Stmt {
-    Import(List<Token> pathParts, Token alias) {
+    Import(List<Token> pathParts, Token path, Token alias) {
+      this.path = path;
       this.pathParts = pathParts;
       this.alias = alias;
     }
@@ -137,6 +138,7 @@ abstract class Stmt {
     @Override
     <R> R accept(Visitor<R> visitor) { return visitor.visitImportStmt(this); }
 
+    final Token path;
     final List<Token> pathParts;
     final Token alias;
   }
