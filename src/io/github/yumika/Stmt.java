@@ -7,6 +7,7 @@ abstract class Stmt {
     R visitBlockStmt(Block stmt);
     R visitCaseStmt(Case stmt);
     R visitClassStmt(Class stmt);
+    R visitDestructuringVarStmt(DestructuringVarStmt stmt);
     R visitExpressionStmt(Expression stmt);
     R visitFunctionStmt(Function stmt);
     R visitIfStmt(If stmt);
@@ -69,6 +70,29 @@ abstract class Stmt {
     final Token name;
     final Expr.Variable superclass;
     final List<Stmt.Function> methods;
+  }
+
+ static class DestructuringVarStmt extends Stmt {
+    DestructuringVarStmt(List<DestructuringField> fields, Expr initializer) {
+      this.fields = fields;
+      this.initializer = initializer;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitDestructuringVarStmt(this); }
+
+    static class DestructuringField {
+      final Token name;
+      final Expr defaultValue;
+
+      DestructuringField(Token name, Expr defaultValue) {
+        this.name = name;
+        this.defaultValue = defaultValue;
+      }
+    }
+
+    final List<DestructuringField> fields;
+    final Expr initializer;
   }
 
   static class Expression extends Stmt {
