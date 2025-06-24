@@ -435,6 +435,38 @@ public class Interpreter implements
   }
 
   @Override
+  public Void visitDestructuringVarStmt(Stmt.DestructuringVarStmt stmt) {
+    Object object = evaluate(stmt.initializer);
+    if (!(object instanceof Map || object instanceof YmkInstance)) {
+      throw new RuntimeError(null, "Destructuring requires and object.");
+    }
+
+    for (Stmt.DestructuringVarStmt.DestructuringField field : stmt.fields) {
+      Object value = null;
+      String key = field.name.lexeme;
+
+      if (object instanceof Map) {
+        value = ((Map<?, ?>) object).getOrDefault(key, null);
+      } else if (object instanceof YmkInstance) {
+        try {
+          value = ((YmkInstance) object).get(new Token(TokenType.IDENTIFIER, key, null, 0), this);
+        } catch (RuntimeError re) {
+          value = null;
+        }
+      }
+
+      // Apply default value if undefined
+      if (value == null && field.defaultValue != null) {
+        value = evaluate(field.defaultValue);
+      }
+
+      environment.define(key, value);
+    }
+
+    return null;
+  }
+
+  @Override
   public Void visitExpressionStmt(Stmt.Expression stmt) {
     evaluate(stmt.expression);
     return null;
