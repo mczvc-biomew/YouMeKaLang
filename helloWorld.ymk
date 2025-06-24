@@ -17,6 +17,12 @@ print Math.pow(15, 1) * 2;
 
 import modules.helloWorld as hw;
 
+print "Start";
+setTimeout(|| { print "Hi after 1s"; }, 1000);
+var id = setInterval(|count| { print "tick" + "." * (4 - count); }, 500);
+
+setTimeout(|| clearTimeout(id), 2000);
+
 print "H-i and H-e-l-l-o";
 hw.hello();
 print hw.hello();
