@@ -52,6 +52,13 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     builder.append(")");
     return builder.toString();
   }
+
+  @Override
+  public String visitDestructuringVarStmt(Stmt.DestructuringVarStmt stmt) {
+    // @TODO: loop through fields
+    return parenthesize2("destructuring var" + stmt.fields, stmt.initializer);
+  }
+
   @Override
   public String visitExpressionStmt(Stmt.Expression stmt) { return parenthesize(";", stmt.expression) ; }
 
