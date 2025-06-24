@@ -8,6 +8,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Interpreter implements
     Expr.Visitor<Object>,
@@ -17,6 +22,16 @@ public class Interpreter implements
   private Environment environment;
 
   private final Map<Expr, Integer> locals = new HashMap<>();
+
+  private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2,
+      runnable -> {
+        Thread thread = new Thread(runnable);
+        thread.setDaemon(true);
+        return thread;
+      });
+  private final Map<Integer, ScheduledFuture<?>> timers = new HashMap<>();
+  private int timerIdCounter = 0;
+  AtomicInteger runningTimers = new AtomicInteger();
 
   Interpreter() {
     globals = new Environment();
@@ -120,6 +135,51 @@ public class Interpreter implements
       @Override
       public String toString() { return "<native fn>"; }
     });
+    globalEnv.define("setTimeout",
+      new YmkMath.NativeFunction("setTimeout", 2,
+      (interpreter, args) -> {
+
+        Object fn = args.get(0);
+        double delay = (double) args.get(1);
+
+        if (!(fn instanceof YmkCallable)) {
+          throw new RuntimeError(null,
+              "First argument to setTimeout must be callable.");
+        }
+        return interpreter.setTimeout((YmkCallable) fn, delay);
+
+      }
+    ));
+    globalEnv.define("setInterval",
+      new YmkMath.NativeFunction("setInterval", 2,
+      (interpreter, args) -> {
+
+        Object fn = args.get(0);
+        double delay = (double) args.get(1);
+
+        if (!(fn instanceof YmkCallable)) {
+          throw new RuntimeError(null,
+  "First argument to setTimeout must be callable.");
+        }
+        return interpreter.setInterval((YmkCallable) fn, delay);
+       }
+     ));
+    globalEnv.define("clearTimeout",
+        new YmkMath.NativeFunction("clearTimeout", 1,
+            (interpreter, args) -> {
+        int id = (Integer) args.get(0);
+        interpreter.clearTimer(id);
+        return null;
+      }
+    ));
+    globalEnv.define("clearInterval",
+        new YmkMath.NativeFunction("clearInterval", 1,
+            (interpreter, args) -> {
+        int id = (Integer) args.get(0);
+        interpreter.clearTimer(id);
+        return null;
+      }
+    ));
 
     globalEnv.define("exit", new YmkCallable() {
       @Override
@@ -136,6 +196,54 @@ public class Interpreter implements
       public String toString() { return "<native fn>"; }
     });
   }
+
+  public int setTimeout(YmkCallable fn, double delayMs) {
+    int id = timerIdCounter++;
+    runningTimers.incrementAndGet();
+    ScheduledFuture<?> future = scheduler.schedule(() -> {
+      try {
+        fn.call(this, List.of());
+      } catch (Exception e) {
+        e.printStackTrace();
+      } finally {
+        runningTimers.decrementAndGet();
+      }
+    }, (long) delayMs, TimeUnit.MILLISECONDS);
+    timers.put(id, future);
+    return id;
+  }
+
+
+  public int setInterval(YmkCallable fn, double intervalMs) {
+    int id = timerIdCounter++;
+    final int[] counter = {0};
+//    runningTimers.incrementAndGet();
+    ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
+      try {
+        List<Object> args = fn.arity() >= 1 ? List.of((double) counter[0]++) : List.of();
+        fn.call(this, args);
+      } catch (Exception e) {
+        e.printStackTrace();
+      } finally {
+//        runningTimers.decrementAndGet();
+      }
+    }, (long) intervalMs, (long) intervalMs, TimeUnit.MILLISECONDS);
+    timers.put(id, future);
+    return id;
+  }
+
+  public void clearTimer(int id) {
+    ScheduledFuture<?> task = timers.get(id);
+    if (task != null) {
+      task.cancel(true);     // stop the scheduled task
+      timers.remove(id);     // remove it from the registry
+    }
+  }
+
+  public void shutdownScheduler() {
+    scheduler.shutdownNow();
+  }
+
 
   Environment getEnvironment() {
     return environment;
@@ -654,11 +762,29 @@ public class Interpreter implements
       case STAR:
         // check-star-operand
         checkNumberOperands(expr.operator, left, right);
-        return (double)left * (double)right;
+        if (left instanceof Double && right instanceof Double) {
+          return (double)left * (double)right;
+        }
+        if (left instanceof String && right instanceof Double) {
+          return repeatString((String) left, (int) ((double) right));
+        }
+        if (left instanceof Double  && right instanceof String) {
+          return repeatString((String) right, (int) ((double) left));
+        }
+        throw new RuntimeError(expr.operator, "Operands must be two numbers or string * number.");
     }
 
     // Unreachable.
     return null;
+  }
+
+  private String repeatString(String str, int times) {
+    if (times < 0) return "";
+    StringBuilder builder = new StringBuilder(str.length() * times);
+    for (int i = 0; i < times; i++) {
+      builder.append(str);
+    }
+    return builder.toString();
   }
 
   @Override
@@ -1055,7 +1181,13 @@ public class Interpreter implements
   private Object lookUpVariable(Token name, Expr expr) {
     Integer distance = locals.get(expr);
     if (distance != null) {
-      Object value = environment.getAt(distance, name.lexeme);
+      int location = environment.containsAt(name.lexeme, 32);
+      Object value = null;
+      if (location > -1) {
+        value = environment.getAt(location, name.lexeme);
+      } else {
+        value = environment.getAt(distance, name.lexeme);
+      }
       return value;
     } else {
       try {
@@ -1075,6 +1207,8 @@ public class Interpreter implements
   private void checkNumberOperands(Token operator,
                                    Object left, Object right) {
     if (left instanceof Double && right instanceof Double) return;
+    if (left instanceof Double && right instanceof String) return;
+    if (left instanceof String && right instanceof Double) return;
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
