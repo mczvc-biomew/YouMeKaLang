@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-class YmkFunction implements YmkCallable {
+public class YmkFunction implements YmkCallable {
   private final String name;
   private final List<Token> params;
   private final List<Stmt> body;
