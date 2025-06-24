@@ -16,7 +16,7 @@ public class YouMeKa {
   // Evaluating Expressions had-runtime-error-field
   static boolean hadRuntimeError = false;
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws IOException, InterruptedException {
     System.out.printf("Hello and welcome!\n");
 
     if (args.length > 1) {
@@ -29,7 +29,7 @@ public class YouMeKa {
     }
   }
 
-  private static void runFile(String fileName) throws IOException {
+  private static void runFile(String fileName) throws IOException, InterruptedException {
 //    Console console = new Console();
 //    console.setVisible(true);
 
@@ -44,7 +44,7 @@ public class YouMeKa {
 
   }
 
-  private static void runPrompt() throws IOException {
+  private static void runPrompt() throws IOException, InterruptedException {
     InputStreamReader input = new InputStreamReader(System.in);
     BufferedReader reader = new BufferedReader(input);
 
@@ -60,7 +60,7 @@ public class YouMeKa {
     }
   }
 
-  private static void run(String source) {
+  private static void run(String source) throws InterruptedException {
     Scanner scanner = new Scanner(source);
     List<Token> tokens = scanner.scanTokens();
 
@@ -82,7 +82,16 @@ public class YouMeKa {
     // Stop if there was a resolution error.
     if (hadError) return;
 
-    interpreter.interpret(statements);
+    try {
+      interpreter.interpret(statements);
+
+      while (interpreter.runningTimers.get() > 0) {
+//        System.out.println("Shutting down in (" + interpreter.runningTimers.get() * 50 + "ms)...");
+        Thread.sleep(100);
+      }
+    } finally {
+      interpreter.shutdownScheduler();
+    }
 
   }
 
