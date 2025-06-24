@@ -2,15 +2,19 @@
 
 ### [0.0.8]
 * unified variable assignment
-* Functions (Statement and Expression), named and anonymous;
+* Functions (Statement and Expression), named and anonymous, getters & setters;
   * Functional programming;
-* Lambda function (syntax like Ruby; not function arrows), getters & setters
+  * builtins (initial plan, ongoing)
+* Lambda function (syntax like Ruby; not function arrows)
 * Class (Object oriented programming)
 * If, Case conditional expressions + (and, or, not binary operators)
 * Try / Catch error handling, (throw exceptions)!
 * Array, Number, Boolean, String Literals
 * Python-like list comprehension
+  * spread list operator
 * Object Literals
+  * spread object operator
+  * object destructuring
 * Java Interoperability!
 
 ## How to use:
