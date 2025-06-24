@@ -1,6 +1,7 @@
 try {
   var x = 1 / 0;
   print x;
+  throw "division by zero!";
 } catch (e) {
   print "Caught error: " + e;
 }
@@ -16,7 +17,7 @@ print Math.pow(15, 1) * 2;
 
 import modules.helloWorld as hw;
 
-print "H-e-l-l-o";
+print "H-i and H-e-l-l-o";
 hw.hello();
 print hw.hello();
 print hw.hello()["world"];
