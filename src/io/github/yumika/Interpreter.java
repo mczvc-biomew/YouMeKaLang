@@ -416,6 +416,8 @@ public class Interpreter implements
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
+    // @TODO: add variable expression resolution here(!!)
+    resolve(stmt.expression, 0);
     Object value = evaluate(stmt.expression);
     System.out.println(stringify(value));
     return null;
