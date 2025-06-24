@@ -35,6 +35,7 @@ class Scanner {
     keywords.put("set", SET);
     keywords.put("super", SUPER);
     keywords.put("this", THIS);
+    keywords.put("throw", THROW);
     keywords.put("true", TRUE);
     keywords.put("try", TRY);
     keywords.put("undefined", UNDEFINED);
