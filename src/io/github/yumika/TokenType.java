@@ -1,6 +1,6 @@
 package io.github.yumika;
 
-enum TokenType {
+public enum TokenType {
   // Single-character tokens.
   LEFT_BRACKET, RIGHT_BRACKET,
   LEFT_PAREN, RIGHT_PAREN,
