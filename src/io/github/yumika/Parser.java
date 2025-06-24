@@ -173,12 +173,15 @@ class Parser {
     List<Token> pathParts = new ArrayList<>();
     Token module = consume(IDENTIFIER, "Expect module name.");
     Token alias = module;
+    Token path = module;
 
     pathParts.add(module);
 
     while (match(DOT)) {
-      pathParts.add(consume(IDENTIFIER,
-          "Expect identifier after '.'."));
+      Token next = consume(IDENTIFIER,
+          "Expect identifier after '.'.");
+      pathParts.add(next);
+      path = new Token(IDENTIFIER, path.lexeme + "." + next.lexeme, null, path.line);
     }
 
     if (match(AS)) {
@@ -186,7 +189,7 @@ class Parser {
     }
 
     consume(SEMICOLON, "Expect ';' import statement.");
-    return new Stmt.Import(pathParts, alias);
+    return new Stmt.Import(pathParts, path, alias);
   }
 
   private Stmt printStatement() {
@@ -453,9 +456,14 @@ class Parser {
         Token bracket = consume(RIGHT_BRACKET, "Expect ']' after index.");
         expr = new Expr.ArrayIndex(expr, bracket, index);
       } else if (match(DOT)) {
-        Token name = consume(IDENTIFIER,
-            "Expect property name after '.'.");
-        expr = new Expr.Get(expr, name);
+        if (check(GET)) {
+          Token name = consume(GET, "Expect get.");
+          expr = new Expr.Get(expr, name);
+        } else {
+          Token name = consume(IDENTIFIER,
+              "Expect property name after '.'.");
+          expr = new Expr.Get(expr, name);
+        }
       } else {
         break;
       }
