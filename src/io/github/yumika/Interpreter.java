@@ -437,6 +437,24 @@ public class Interpreter implements
   }
 
   @Override
+  public Void visitThrowStmt(Stmt.Throw stmt) {
+    Object value = evaluate(stmt.error);
+    throw new RuntimeError(null, value.toString());
+  }
+
+  @Override
+  public Void visitTryCatchStmt(Stmt.TryCatch stmt) {
+    try {
+      executeBlock(stmt.tryBlock, new Environment(environment));
+    } catch (RuntimeError err) {
+      Environment catchEnv = new Environment(environment);
+      catchEnv.define(stmt.errorVar.lexeme, err.getMessage());
+      executeBlock(stmt.catchBlock, catchEnv);
+    }
+    return null;
+  }
+
+  @Override
   public Void visitVarStmt(Stmt.Var stmt) {
     Object value = null;
     if (stmt.initializer != null) {
