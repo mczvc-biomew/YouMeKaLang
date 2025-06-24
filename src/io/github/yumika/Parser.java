@@ -83,6 +83,8 @@ class Parser {
 
     if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
+    if (match(TRY)) return tryStatement();
+
     return expressionStatement();
   }
 
@@ -213,6 +215,32 @@ class Parser {
 
     consume(SEMICOLON, "Expect ';' after return value.");
     return new Stmt.Return(keyword, value);
+  }
+
+  private Stmt throwStatement() {
+    Expr error = expression();
+    consume(SEMICOLON, "Expect ';' after throw.");
+    return new Stmt.Throw(error);
+  }
+
+  private Stmt tryStatement() {
+    consume(LEFT_BRACE,
+        "Expect '{' after 'try'.");
+    List<Stmt> tryBlock = block();
+
+    consume(CATCH,
+        "Expect 'catch' after 'try' block.");
+    consume(LEFT_PAREN,
+        "Expect '(' after 'catch'.");
+    Token errorVar = consume(IDENTIFIER,
+        "Expect error variable name.");
+    consume(RIGHT_PAREN,
+        "Expect ')' after error variable.");
+    consume(LEFT_BRACE,
+        "Expect '{' before 'catch' block.");
+    List<Stmt> catchBlock = block();
+
+    return new Stmt.TryCatch(tryBlock, errorVar, catchBlock);
   }
 
   private Stmt varDeclaration() {
