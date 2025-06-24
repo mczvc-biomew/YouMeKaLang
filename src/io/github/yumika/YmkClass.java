@@ -3,14 +3,14 @@ package io.github.yumika;
 import java.util.List;
 import java.util.Map;
 
-class YmkClass implements YmkCallable {
+public class YmkClass implements YmkCallable {
   final String name;
   final YmkClass superclass;
 
   private final Map<String, YmkFunction> methods;
 
-  YmkClass(String name, YmkClass superclass,
-           Map<String, YmkFunction> methods) {
+  public YmkClass(String name, YmkClass superclass,
+                  Map<String, YmkFunction> methods) {
     this.superclass = superclass;
     this.name = name;
     this.methods = methods;

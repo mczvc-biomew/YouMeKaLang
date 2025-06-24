@@ -1,6 +1,6 @@
 package io.github.yumika;
 
-enum TokenType {
+public enum TokenType {
   // Single-character tokens.
   LEFT_BRACKET, RIGHT_BRACKET,
   LEFT_PAREN, RIGHT_PAREN,
@@ -23,7 +23,7 @@ enum TokenType {
 
   // Keywords.
   AND, AS, CASE, CATCH, CLASS, ELSE, FALSE, FUN, FOR, GET, IF, IN, IMPORT, OR, NEW, NOT, NULL,
-  PRINT, PUTS, RETURN, SET, SUPER, THIS, TRUE, TRY, UNDEFINED, VAR, WHEN, WHILE,
+  PRINT, PUTS, RETURN, SET, SUPER, THIS, THROW, TRUE, TRY, UNDEFINED, VAR, WHEN, WHILE,
 
   EOF
 }

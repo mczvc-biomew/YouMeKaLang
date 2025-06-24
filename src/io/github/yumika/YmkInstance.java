@@ -4,13 +4,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class YmkInstance {
+public class YmkInstance {
   private YmkClass klass;
   private final Map<String, Object> fields = new HashMap<>();
   private final Map<String, YmkFunction> getters = new HashMap<>();
   private final Map<String, YmkFunction> setters = new HashMap<>();
 
-  YmkInstance(YmkClass klass) { this.klass = klass; }
+  public YmkInstance(YmkClass klass) { this.klass = klass; }
 
   boolean containsField(String name) {
     return fields.containsKey(name);
@@ -36,7 +36,7 @@ class YmkInstance {
 
   Map<String, Object> getFields() { return fields; }
 
-  void set(Token name, Object value, Interpreter interpreter) { set(name.lexeme, value, interpreter); }
+  protected void set(Token name, Object value, Interpreter interpreter) { set(name.lexeme, value, interpreter); }
   void set(String name, Object value, Interpreter interpreter) {
     if (setters.containsKey(name)) {
       setters.get(name).call(interpreter, List.of(value));

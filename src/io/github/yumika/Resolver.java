@@ -140,10 +140,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitImportStmt(Stmt.Import stmt) {
+    if (stmt.path.lexeme.startsWith("java.")) {
+      return null;
+    }
     declare(stmt.alias);
     define(stmt.alias);
+
     return null;
   }
+
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
@@ -171,6 +176,28 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
       resolve(stmt.value);
     }
+    return null;
+  }
+
+  @Override
+  public Void visitThrowStmt(Stmt.Throw stmt) {
+    resolve(stmt.error);
+
+    return null;
+  }
+
+  @Override
+  public Void visitTryCatchStmt(Stmt.TryCatch stmt) {
+    resolve(stmt.tryBlock);
+
+    // Catch block get a new scope
+    beginScope();
+    declare(stmt.errorVar);
+    define(stmt.errorVar);
+
+    resolve(stmt.catchBlock);
+    endScope();
+
     return null;
   }
 

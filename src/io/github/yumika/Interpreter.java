@@ -1,12 +1,15 @@
 package io.github.yumika;
 
+import io.github.yumika.javainterop.*;
+import io.github.yumika.modules.YmkMath;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
-class Interpreter implements
+public class Interpreter implements
     Expr.Visitor<Object>,
     Stmt.Visitor<Void>
 {
@@ -20,6 +23,7 @@ class Interpreter implements
     environment = globals;
 
     initGlobalDefinitions(globals);
+    initJavaPackage(globals);
   }
 
   Interpreter(Environment env) {
@@ -27,6 +31,12 @@ class Interpreter implements
     environment = globals;
 
     initGlobalDefinitions(globals);
+    initJavaPackage(globals);
+  }
+
+  void initJavaPackage(Environment globals) {
+    globals.define("java", new JavaPackage("java"));
+    globals.define("Math", new YmkMath(this));
   }
 
   void initGlobalDefinitions(Environment globalEnv) {
@@ -345,6 +355,9 @@ class Interpreter implements
 
   @Override
   public Void visitImportStmt(Stmt.Import stmt) {
+    if (stmt.path.lexeme.startsWith("java.")) {
+      return null;
+    }
     StringBuilder pathBuilder = new StringBuilder();
     String aliasName = stmt.alias.lexeme;
 
@@ -403,6 +416,8 @@ class Interpreter implements
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
+    // @TODO: add variable expression resolution here(!!)
+    resolve(stmt.expression, 0);
     Object value = evaluate(stmt.expression);
     System.out.println(stringify(value));
     return null;
@@ -421,6 +436,24 @@ class Interpreter implements
     if (stmt.value != null) value = evaluate(stmt.value);
 
     throw new Return(value);
+  }
+
+  @Override
+  public Void visitThrowStmt(Stmt.Throw stmt) {
+    Object value = evaluate(stmt.error);
+    throw new RuntimeError(null, value.toString());
+  }
+
+  @Override
+  public Void visitTryCatchStmt(Stmt.TryCatch stmt) {
+    try {
+      executeBlock(stmt.tryBlock, new Environment(environment));
+    } catch (RuntimeError err) {
+      Environment catchEnv = new Environment(environment);
+      catchEnv.define(stmt.errorVar.lexeme, err.getMessage());
+      executeBlock(stmt.catchBlock, catchEnv);
+    }
+    return null;
   }
 
   @Override
@@ -647,6 +680,16 @@ class Interpreter implements
       arguments.add(evaluate(argument));
     }
 
+    if (callee instanceof JavaClassWrapper) {
+      return ((JavaClassWrapper) callee).call(arguments);
+    }
+    if (callee instanceof JavaInstanceMethod) {
+      return ((JavaInstanceMethod) callee).call(arguments);
+    }
+    if (callee instanceof JavaStaticMethod) {
+      return ((JavaStaticMethod) callee).call(arguments);
+    }
+
     // check-is-callable
     if (!(callee instanceof YmkCallable)) {
       throw new RuntimeError(expr.paren,
@@ -722,6 +765,16 @@ class Interpreter implements
     if ("__class__".equals(expr.name.lexeme)) {
       return getTypeName(object);
     }
+    if (object instanceof JavaPackage) {
+      return ((JavaPackage) object).get(expr.name.lexeme);
+    }
+    if (object instanceof JavaClassWrapper) {
+      return ((JavaClassWrapper) object).get(expr.name.lexeme);
+    }
+    if (object instanceof JavaInstanceWrapper) {
+      return ((JavaInstanceWrapper) object).get(expr.name.lexeme);
+    }
+
 
     if (object instanceof YmkInstance) {
       return ((YmkInstance) object).get(expr.name, this);
