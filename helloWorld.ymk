@@ -1,3 +1,10 @@
+try {
+  var x = 1 / 0;
+  print x;
+} catch (e) {
+  print "Caught error: " + e;
+}
+
 import java.util;
 
 var list = java.util.ArrayList();
