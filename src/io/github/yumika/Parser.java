@@ -84,6 +84,7 @@ class Parser {
     if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
     if (match(TRY)) return tryStatement();
+    if (match(THROW)) return throwStatement();
 
     return expressionStatement();
   }
