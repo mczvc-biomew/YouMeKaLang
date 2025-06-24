@@ -2,16 +2,18 @@
 
 ### [0.0.8]
 * unified variable assignment
-* Functions
-* Class
+* Functions (Statement and Expression), named and anonymous;
+  * Functional programming;
+* Lambda function (syntax like Ruby; not function arrows), getters & setters
+* Class (Object oriented programming)
 * If, Case conditional expressions + (and, or, not binary operators)
-* Array, Number, String Literals
+* Array, Number, Boolean, String Literals
 * Python-like list comprehension
-* Lambda function (syntax like Ruby; not function arrows)
 * Object Literals
+* Java Interoperability!
 
 ## How to use:
-### Download [YMK-0.0.8rc2](https://github.com/mczvc-biomew/YouMeKaLang/releases/download/0.0.8/YMK-0.0.8rc2.jar)
+### Download [YMK-0.0.8rc3](https://github.com/mczvc-biomew/YouMeKaLang/releases/download/0.0.8rc3/YMK-0.0.8rc3.jar)
 
 > execute
 > ``java -jar <name-of-ymk-executable> <source-file.ymk>``
