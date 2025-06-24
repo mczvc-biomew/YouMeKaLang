@@ -115,6 +115,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitDestructuringVarStmt(Stmt.DestructuringVarStmt stmt){
+    // First resolve the initializer expression
+    resolve(stmt.initializer);
+
+    // Declare each field in destructured patter
+    for (Stmt.DestructuringVarStmt.DestructuringField field : stmt.fields) {
+      declare(field.name);
+      if (field.defaultValue != null) {
+        resolve(field.defaultValue);
+      }
+      define(field.name);
+    }
+
+    return null;
+  }
+
+  @Override
   public Void visitExpressionStmt(Stmt.Expression stmt) {
     resolve(stmt.expression);
     return null;
