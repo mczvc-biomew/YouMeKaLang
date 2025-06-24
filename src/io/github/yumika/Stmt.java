@@ -14,6 +14,8 @@ abstract class Stmt {
     R visitPrintStmt(Print stmt);
     R visitPutsStmt(Puts stmt);
     R visitReturnStmt(Return stmt);
+    R visitThrowStmt(Throw stmt);
+    R visitTryCatchStmt(TryCatch stmt);
     R visitVarStmt(Var stmt);
     R visitWhileStmt(While stmt);
   }
@@ -172,6 +174,31 @@ abstract class Stmt {
 
     final Token keyword;
     final Expr value;
+  }
+
+  static class Throw extends Stmt {
+    Throw(Expr error) {
+      this.error = error;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitThrowStmt(this); }
+    final Expr error;
+  }
+
+  static class TryCatch extends Stmt {
+    TryCatch(List<Stmt> tryBlock, Token errorVar, List<Stmt> catchBlock) {
+      this.tryBlock = tryBlock;
+      this.errorVar = errorVar;
+      this.catchBlock = catchBlock;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitTryCatchStmt(this); }
+
+    final List<Stmt> tryBlock;
+    final Token errorVar;
+    final List<Stmt> catchBlock;
   }
 
   static class Var extends Stmt {
