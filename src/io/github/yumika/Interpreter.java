@@ -56,145 +56,7 @@ public class Interpreter implements
 
   void initGlobalDefinitions(Environment globalEnv) {
     globalEnv.define("undefined", new YmkUndefined());
-    globalEnv.define("env", new YmkEnv());
-    globalEnv.define("typeof", new YmkCallable() {
-      @Override
-      public int arity() {
-        return 1;
-      }
-
-      @Override
-      public Object call(Interpreter interpreter, List<Object> arguments) {
-        Object value = arguments.get(0);
-
-        return getTypeName(value);
-      }
-
-      @Override
-      public String toString() {
-        return "<native fn typeof>";
-      }
-    });
-    globalEnv.define("isNumber", isTypeOf(Double.class));
-    globalEnv.define("isString", isTypeOf(String.class));
-    globalEnv.define("isBoolean", isTypeOf(Boolean.class));
-    globalEnv.define("isArray", isTypeOf(List.class));
-    globalEnv.define("isFunction", isTypeOfFunction());
-    globalEnv.define("isObject", isTypeOf(YmkInstance.class));
-    globalEnv.define("str", new YmkCallable() {
-      @Override
-      public int arity() {
-        return -2;
-      }
-
-      @Override
-      public Object call(Interpreter interpreter, List<Object> arguments) {
-        StringBuilder strBuilder = new StringBuilder();
-        boolean isEmpty = true;
-        for (Object argument : arguments) {
-          strBuilder.append(argument.toString()).append(" ");
-          if (isEmpty) {
-            isEmpty = false;
-          }
-        }
-        if (!isEmpty) {
-          strBuilder.deleteCharAt(strBuilder.length() - 1);
-        }
-        return strBuilder.toString();
-      }
-    });
-    globalEnv.define("length", new YmkCallable() {
-      @Override
-      public int arity() {
-        return 1;
-      }
-
-      @Override
-      public Object call(Interpreter interpreter, List<Object> arguments) {
-        if (arguments.get(0) instanceof List<?> list) {
-          return list.size();
-        } else if (arguments.get(0) instanceof String string) {
-          return string.length();
-        } else if (arguments.get(0) instanceof Map<?, ?> map) {
-          return map.size();
-        } else {
-          throw new RuntimeError(null, "Argument doesn't have a length.");
-        }
-      }
-    });
-    globalEnv.define("clock", new YmkCallable() {
-      @Override
-      public int arity() { return 0; }
-
-      @Override
-      public Object call(Interpreter interpreter,
-                         List<Object> arguments) {
-        return (double)System.currentTimeMillis() / 1000.0;
-      }
-
-      @Override
-      public String toString() { return "<native fn>"; }
-    });
-    globalEnv.define("setTimeout",
-      new YmkMath.NativeFunction("setTimeout", 2,
-      (interpreter, args) -> {
-
-        Object fn = args.get(0);
-        double delay = (double) args.get(1);
-
-        if (!(fn instanceof YmkCallable)) {
-          throw new RuntimeError(null,
-              "First argument to setTimeout must be callable.");
-        }
-        return interpreter.setTimeout((YmkCallable) fn, delay);
-
-      }
-    ));
-    globalEnv.define("setInterval",
-      new YmkMath.NativeFunction("setInterval", 2,
-      (interpreter, args) -> {
-
-        Object fn = args.get(0);
-        double delay = (double) args.get(1);
-
-        if (!(fn instanceof YmkCallable)) {
-          throw new RuntimeError(null,
-  "First argument to setTimeout must be callable.");
-        }
-        return interpreter.setInterval((YmkCallable) fn, delay);
-       }
-     ));
-    globalEnv.define("clearTimeout",
-        new YmkMath.NativeFunction("clearTimeout", 1,
-            (interpreter, args) -> {
-        int id = (Integer) args.get(0);
-        interpreter.clearTimer(id);
-        return null;
-      }
-    ));
-    globalEnv.define("clearInterval",
-        new YmkMath.NativeFunction("clearInterval", 1,
-            (interpreter, args) -> {
-        int id = (Integer) args.get(0);
-        interpreter.clearTimer(id);
-        return null;
-      }
-    ));
-
-    globalEnv.define("exit", new YmkCallable() {
-      @Override
-      public int arity() { return 0;}
-
-      @Override
-      public Void call(Interpreter interpreter,
-                       List<Object> arguments) {
-        System.exit(0);
-        return null;
-      }
-
-      @Override
-      public String toString() { return "<native fn>"; }
-    });
+    globalEnv.define("__builtins__", Builtins.loadBuiltins(this));
   }
 
   public int setTimeout(YmkCallable fn, double delayMs) {
@@ -329,7 +191,7 @@ public class Interpreter implements
     }
   }
 
-  private YmkCallable isTypeOf(Class<?> cls) {
+  YmkCallable isTypeOf(Class<?> cls) {
     return new YmkCallable() {
       @Override
       public int arity() {
@@ -348,7 +210,7 @@ public class Interpreter implements
     };
   }
 
-  private YmkCallable isTypeOfFunction() {
+  YmkCallable isTypeOfFunction() {
     return new YmkCallable() {
       @Override
       public int arity() {
@@ -1225,8 +1087,16 @@ public class Interpreter implements
       try {
         return globals.get(name);
       } catch (RuntimeError.UndefinedException undefEx) {
-        throw new RuntimeError.ReferenceError(name,
-            "Uncaught ReferenceError: " + name.lexeme + " is not defined");
+        try {
+          YmkInstance builtins = (YmkInstance) globals.get("__builtins__");
+          if (builtins.containsField(name.lexeme)) {
+            return builtins.get(name.lexeme, this);
+          }
+          return builtins;
+        } catch (RuntimeError.UndefinedException undefEx2) {
+          throw new RuntimeError.ReferenceError(name,
+              "Uncaught ReferenceError: " + name.lexeme + " is not defined");
+        }
       }
     }
   }
@@ -1244,7 +1114,7 @@ public class Interpreter implements
     throw new RuntimeError(operator, "Operands must be numbers.");
   }
 
-  private String getTypeName(Object value) {
+  String getTypeName(Object value) {
     if (value == null) return "null";
     if (value instanceof Double) return "Number";
     if (value instanceof String) return "String";
