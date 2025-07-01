@@ -379,6 +379,19 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitNullCoalesceExpr(Expr.NullCoalesce expr) {
+    resolve(expr.left);
+    resolve(expr.right);
+    return null;
+  }
+
+  @Override
+  public Void visitOptionalGetExpr(Expr.OptionalGet expr) {
+    resolve(expr.object);
+    return null;
+  }
+
+  @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     List<Expr.ObjectLiteral.Property> props = ((Expr.ObjectLiteral)expr).properties;
     if (props == null) return null;
