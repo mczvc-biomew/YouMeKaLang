@@ -184,8 +184,10 @@ abstract class Expr {
   }
 
   static class Function extends Expr {
-    Function(List<Token> params, List<Stmt> body) {
+    Function(List<Token> params, List<Token> paramTypes, Token returnType, List<Stmt> body) {
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = false;
       this.hasVarKwargs = false;
@@ -193,10 +195,13 @@ abstract class Expr {
       this.kwArgsName = null;
     }
 
-    Function(List<Token> params, List<Stmt> body,
-             boolean hasVarArgs, boolean hasVarKwargs,
-             Token varArgsName, Token kwArgsName) {
+    Function(List<Token> params, List<Token> paramTypes,
+        Token returnType, List<Stmt> body,
+        boolean hasVarArgs, boolean hasVarKwargs,
+        Token varArgsName, Token kwArgsName) {
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = hasVarArgs;
       this.hasVarKwargs = hasVarKwargs;
@@ -208,6 +213,8 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitFunctionExpr(this); }
 
     final List<Token> params;
+    final List<Token> paramTypes;
+    final Token returnType;
     final List<Stmt> body;
     final boolean hasVarArgs;
     final boolean hasVarKwargs;
@@ -238,8 +245,10 @@ abstract class Expr {
   }
 
   static class Lambda extends Expr {
-    Lambda(List<Token> params, Expr body) {
+    Lambda(List<Token> params, List<Token> paramTypes, Token returnType, Expr body) {
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
     }
 
@@ -247,6 +256,8 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitLambdaExpr(this); }
 
     final List<Token> params;
+    final List<Token> paramTypes;
+    final Token returnType;
     final Expr body;
   }
 
