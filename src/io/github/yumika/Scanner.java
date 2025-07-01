@@ -124,6 +124,15 @@ class Scanner {
         }
         break;
       // < slash
+      case '?':
+        if (match('.')) {
+          addToken(QUESTION_DOT);
+        } else if (match('?')) {
+          addToken(QUESTION_QUESTION);
+        } else {
+          addToken(QUESTION);
+        }
+        break;
       // whitespace
 
       case ' ':
