@@ -607,6 +607,30 @@ public class Interpreter implements
     Object left = evaluate(expr.left);
     Object right = evaluate(expr.right);
 
+    String op = expr.operator.lexeme;
+
+    String method = switch (expr.operator.type) {
+      case PLUS -> "__add__";
+      case MINUS -> "__sub__";
+      case STAR -> "__mul__";
+      case SLASH -> "__div__";
+      case PERCENT -> "__mod__";
+      case EQUAL_EQUAL -> "__eq__";
+      case BANG_EQUAL -> "__ne__";
+      case GREATER -> "__gt__";
+      case GREATER_EQUAL -> "__ge__";
+      case LESS -> "__lt__";
+      case LESS_EQUAL -> "__le__";
+      default -> null;
+    };
+
+    if (method != null && left instanceof YmkInstance) {
+      Object overload = ((YmkInstance) left).getOverload(method, this);
+      if (overload instanceof YmkCallable fn) {
+        return fn.call(this, List.of(right));
+      }
+    }
+
     switch (expr.operator.type) {
       // binary-equality
       case BANG_EQUAL: return !isEqual(left, right);
@@ -668,8 +692,11 @@ public class Interpreter implements
         throw new RuntimeError(expr.operator, "Operands must be two numbers or string * number.");
     }
 
+    throw new RuntimeError(expr.operator,
+        "Operator '" + op + "' not supported for " + stringify(left));
+
     // Unreachable.
-    return null;
+//    return null;
   }
 
   private String repeatString(String str, int times) {
