@@ -26,12 +26,33 @@ class YmkLambda implements YmkCallable {
   public Object call(Interpreter interpreter, List<Object> arguments) {
     Environment environment = new Environment(closure);
     for (int i = 0; i < declaration.params.size(); i++) {
+      Token param = declaration.params.get(i);
+      Token paramType = declaration.paramTypes.get(i);
+      Object argValue = arguments.get(i);
+
+      if (paramType != null) {
+        String expected = paramType.lexeme;
+        if (!interpreter.isTypeMatch(argValue, expected)) {
+          throw new RuntimeError(param,
+              "TypeError: Expected argument of type '" + expected + "', got '" +
+                  interpreter.getTypeName(argValue) + "'");
+        }
+      }
       environment.define(declaration.params.get(i).lexeme, arguments.get(i));
     }
     if (thisContext != null) {
       environment.define("this", thisContext);
     }
-    return interpreter.evaluateExpr(declaration.body, environment);
+    Object returnValue = interpreter.evaluateExpr(declaration.body, environment);
+    if (declaration.returnType != null) {
+      String expected = declaration.returnType.lexeme;
+      if (!interpreter.isTypeMatch(returnValue, expected)) {
+        throw new RuntimeError(declaration.returnType,
+            "TypeError: Expected return of type '" + expected + "', got '" +
+                interpreter.getTypeName(returnValue) + "'");
+      }
+    }
+    return returnValue;
   }
 
   @Override
