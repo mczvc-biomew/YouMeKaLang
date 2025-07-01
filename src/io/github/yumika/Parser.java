@@ -25,7 +25,7 @@ class Parser {
   }
 
   private Expr expression() {
-    return assignment();
+    return nullCoalesce();
   }
 
   private Stmt declaration() {
@@ -538,6 +538,9 @@ class Parser {
               "Expect property name after '.'.");
           expr = new Expr.Get(expr, name);
         }
+      } else if (match(QUESTION_DOT)) {
+        Token name = consume(IDENTIFIER, "Expect property name after '?.'.");
+        expr = new Expr.OptionalGet(expr, name);
       } else {
         break;
       }
@@ -729,6 +732,18 @@ class Parser {
     consume(RIGHT_BRACKET, "Expect ']' after array size.");
 
     return new Expr.NewTypedArray(type, sizeExpr);
+  }
+
+  private Expr nullCoalesce() {
+    Expr expr = assignment();
+
+    while (match(QUESTION_QUESTION)) {
+      Token operator = previous();
+      Expr right = assignment();
+      expr = new Expr.NullCoalesce(expr, operator, right);
+    }
+
+    return expr;
   }
 
   private Expr listComprehension() {
