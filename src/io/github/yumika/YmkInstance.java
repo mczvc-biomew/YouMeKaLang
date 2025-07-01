@@ -54,6 +54,14 @@ public class YmkInstance {
     setters.put(name, fn);
   }
 
+  Object getOverload(String methodName, Interpreter interpreter) {
+    try {
+      return get(new Token(TokenType.IDENTIFIER, methodName, null, 0), interpreter);
+    } catch (RuntimeError e) {
+      return null;
+    }
+  }
+
   @Override
   public String toString() { return klass.name + " instance = " + fields; }
 }
