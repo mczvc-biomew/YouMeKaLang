@@ -215,6 +215,16 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitNullCoalesceExpr(Expr.NullCoalesce expr) {
+    return parenthesize2("??", expr.left, expr.operator, expr.right);
+  }
+
+  @Override
+  public String visitOptionalGetExpr(Expr.OptionalGet expr) {
+    return parenthesize2("?.", expr.object, expr.name);
+  }
+
+  @Override
   public String visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     return parenthesize2("{:}", expr.properties);
   }
