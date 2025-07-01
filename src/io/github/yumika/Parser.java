@@ -32,7 +32,7 @@ class Parser {
     try {
       if (match(CLASS)) return classDeclaration();
 
-      if (match(FUN)) return function("function");
+      if (match(FUN)) return functionStatement("function");
 
       if (match(VAR)) return varDeclaration();
 
@@ -56,7 +56,7 @@ class Parser {
 
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      methods.add(function("method"));
+      methods.add(functionStatement("method"));
     }
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
@@ -297,10 +297,12 @@ class Parser {
     return new Stmt.Expression(expr);
   }
 
-  private Stmt.Function function(String kind) {
+  private Stmt.Function functionStatement(String kind) {
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
     List<Token> parameters = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    List<Expr> defaultValues = new ArrayList<>();
 
     boolean hasVarArgs = false;
     boolean hasVarKwargs = false;
@@ -326,14 +328,32 @@ class Parser {
         } else {
           parameters.add(
               consume(IDENTIFIER, "Expect parameter name."));
+
+          if (match(COLON)) {
+            Token type = consume(IDENTIFIER, "Expect type name.");
+            paramTypes.add(type);
+          } else {
+            paramTypes.add(null);
+          }
+
+          if (match(EQUAL)) {
+            defaultValues.add(expression());
+          } else {
+            defaultValues.add(null);
+          }
         }
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
+    Token returnType = null;
+    if (match(COLON)) {
+      returnType = consume(IDENTIFIER, "Expect return type.");
+    }
+
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
+    return new Stmt.Function(name, parameters, paramTypes, returnType, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
   }
 
   private List<Stmt> block() {
@@ -611,21 +631,46 @@ class Parser {
   private Expr functionExpression(String kind) {
     consume(LEFT_PAREN, "Expect '(' after '" + kind + "'.");
     List<Token> parameters = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    List<Expr> defaultValues = new ArrayList<>();
+
     if (!check(RIGHT_PAREN)) {
       do {
         parameters.add(consume(IDENTIFIER,
             "Expect parameter name."));
+
+        if (match(COLON)) {
+          Token type = consume(IDENTIFIER, "Expect type name.");
+          paramTypes.add(type);
+        } else {
+          paramTypes.add(null);
+        }
+
+        if (match(EQUAL)) {
+          defaultValues.add(expression());
+        } else {
+          defaultValues.add(null);
+        }
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+    Token returnType = null;
+    if (match(COLON)) {
+      returnType = consume(IDENTIFIER, "Expect return type.");
+    }
+
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Expr.Function(parameters, body);
+    return new Expr.Function(parameters, paramTypes, returnType, body);
 
   }
 
   private Expr lambda() {
     List<Token> parameters = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    List<Expr> defaultValues = new ArrayList<>();
+    Token returnType = null;
     // Handle |x| ...
     if (match(PIPE)) {
       if (!check(PIPE)) {
@@ -634,9 +679,26 @@ class Parser {
             error(peek(), "Maximum of 255 parameters.");
           }
           parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+
+          if (match(COLON)) {
+            Token type = consume(IDENTIFIER, "Expect type name.");
+            paramTypes.add(type);
+          } else {
+            paramTypes.add(null);
+          }
+
+          if (match(EQUAL)) {
+            defaultValues.add(expression());
+          } else {
+            defaultValues.add(null);
+          }
         } while (match(COMMA));
       }
       consume(PIPE, "Expect '|' after parameters.");
+
+      if (match(COLON)) {
+        returnType = consume(IDENTIFIER, "Expect return type.");
+      }
     } else {
       throw error(peek(), "Expect lambda parameters.");
     }
@@ -647,7 +709,7 @@ class Parser {
     } else {
       body = expression();
     }
-    return new Expr.Lambda(parameters, body);
+    return new Expr.Lambda(parameters, paramTypes, returnType, body);
   }
 
   private Expr newObject() {
@@ -753,17 +815,37 @@ class Parser {
         consume(LEFT_PAREN, "Expect '(' after property name.");
 
         List<Token> parameters = new ArrayList<>();
+        List<Token> paramTypes = new ArrayList<>();
+        List<Expr> defaultValues = new ArrayList<>();
         if (!check(RIGHT_PAREN)) {
           do {
             parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+
+            if (match(COLON)) {
+              Token type = consume(IDENTIFIER, "Expect type name.");
+              paramTypes.add(type);
+            } else {
+              paramTypes.add(null);
+            }
+
+            if (match(EQUAL)) {
+              defaultValues.add(expression());
+            } else {
+              defaultValues.add(null);
+            }
           } while (match(COMMA));
         }
         consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
+        Token returnType = null;
+        if (match(COLON)) {
+          returnType = consume(IDENTIFIER, "Expect return type.");
+        }
+
         consume(LEFT_BRACE, "Expect '{' before accessor body.");
         List<Stmt> body = block();
 
-        Expr.Function function = new Expr.Function(parameters, body);
+        Expr.Function function = new Expr.Function(parameters, paramTypes, returnType, body);
         properties.add(new Expr.ObjectLiteral.Accessor(accessorType, name, function));
       } else {
         throw error(peek(), "Expect property name.");
