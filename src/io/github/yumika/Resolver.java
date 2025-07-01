@@ -469,9 +469,21 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     currentFunction = type;
 
     beginScope();
-    for (Token param : function.params) {
+//    for (Token param : function.params) {
+    for (int i = 0; i < function.params.size(); i++) {
+      Token param = function.params.get(i);
       declare(param);
       define(param);
+
+      if (function.paramTypes.get(i) != null) {
+        Token typeToken = function.paramTypes.get(i);
+        String expected = typeToken.lexeme;
+      }
+
+    }
+
+    if (function.returnType != null) {
+      Token returnType = function.returnType;
     }
     resolve(function.body);
     endScope();
