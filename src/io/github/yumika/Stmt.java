@@ -105,9 +105,12 @@ abstract class Stmt {
   }
 
   static class Function extends Stmt {
-    Function(Token name, List<Token> params, List<Stmt> body) {
+    Function(Token name, List<Token> params, List<Token> paramTypes,
+        Token returnType, List<Stmt> body) {
       this.name = name;
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = false;
       this.hasVarKwargs = false;
@@ -115,11 +118,14 @@ abstract class Stmt {
       this.kwArgsName = null;
     }
 
-    Function(Token name, List<Token> params, List<Stmt> body,
-             boolean hasVarArgs, boolean hasVarKwargs,
-             Token varArgsName, Token kwArgsName) {
+    Function(Token name, List<Token> params, List<Token> paramTypes,
+        Token returnType, List<Stmt> body,
+        boolean hasVarArgs, boolean hasVarKwargs,
+        Token varArgsName, Token kwArgsName) {
       this.name = name;
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = hasVarArgs;
       this.hasVarKwargs = hasVarKwargs;
@@ -132,6 +138,8 @@ abstract class Stmt {
 
     final Token name;
     final List<Token> params;
+    final List<Token> paramTypes;
+    final Token returnType;
     final List<Stmt> body;
     final boolean hasVarArgs;
     final boolean hasVarKwargs;
