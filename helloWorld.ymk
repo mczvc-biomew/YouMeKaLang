@@ -49,10 +49,10 @@ print "";
 
 
 // lambda
-var add = |a,b| a+b;
-var triple = |x| x*3;
-var always = || 42;
-var HelloWorld = || { return "Hello" + " || " + "World!"; };
+var add = |a:number, b:number| a+b;
+var triple = |x: number| x*3;
+var always = ||: number 42;
+var HelloWorld = ||: string { return "Hello" + " || " + "World!"; };
 
 puts "1 add 2 is ";
 print add(1,2);
@@ -85,7 +85,7 @@ print "";
 
 print "# Functions";
 
-fun caller(g) {
+fun caller(g: function) {
   g();
   // g should be a function, not null.
   print g == null; // expect: false
