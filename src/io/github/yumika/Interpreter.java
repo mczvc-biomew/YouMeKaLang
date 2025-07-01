@@ -1177,5 +1177,19 @@ public class Interpreter implements
     return object.toString();
   }
 
+  boolean isTypeMatch(Object value, String expectedType) {
+    switch (expectedType) {
+      case "int": return value instanceof Integer;
+      case "number": return value instanceof Double;
+      case "bool": return value instanceof Boolean;
+      case "string": return value instanceof String;
+      case "function": return value instanceof YmkCallable;
+      case "list": return value instanceof List;
+      case "map":
+      case "object": return value instanceof Map || value instanceof YmkInstance;
+      default: return true;
+    }
+  }
+
 
 }
