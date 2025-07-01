@@ -21,7 +21,9 @@ abstract class Expr {
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
     R visitNewTypedArrayExpr(NewTypedArray expr);
+    R visitNullCoalesceExpr(NullCoalesce expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
+    R visitOptionalGetExpr(OptionalGet expr);
     R visitPostfixExpr(Postfix expr);
     R visitPrefixExpr(Prefix expr);
     R visitSetExpr(Set expr);
@@ -314,6 +316,20 @@ abstract class Expr {
     final Expr size;
   }
 
+  static class NullCoalesce extends Expr {
+    NullCoalesce(Expr left, Token operator, Expr right) {
+      this.left = left;
+      this.operator = operator;
+      this.right = right;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitNullCoalesceExpr(this); }
+
+    final Expr left;
+    final Token operator;
+    final Expr right;
+  }
+
   static class ObjectLiteral extends Expr {
     ObjectLiteral(List<Property> properties) {
       this.properties = properties;
@@ -354,6 +370,18 @@ abstract class Expr {
       final Token name;
       final Expr.Function function;
     }
+  }
+
+  static class OptionalGet extends Expr {
+    OptionalGet(Expr object, Token name) {
+      this.object = object;
+      this.name = name;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitOptionalGetExpr(this); }
+
+    final Expr object;
+    final Token name;
   }
 
   static class Postfix extends Expr {
