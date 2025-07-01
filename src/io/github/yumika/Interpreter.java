@@ -23,7 +23,7 @@ public class Interpreter implements
 
   private final Map<Expr, Integer> locals = new HashMap<>();
 
-  private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2,
+  private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2,
       runnable -> {
         Thread thread = new Thread(runnable);
         thread.setDaemon(true);
@@ -1092,7 +1092,7 @@ public class Interpreter implements
           if (builtins.containsField(name.lexeme)) {
             return builtins.get(name.lexeme, this);
           }
-          return builtins;
+          throw new RuntimeError.UndefinedException(undefEx);
         } catch (RuntimeError.UndefinedException undefEx2) {
           throw new RuntimeError.ReferenceError(name,
               "Uncaught ReferenceError: " + name.lexeme + " is not defined");
