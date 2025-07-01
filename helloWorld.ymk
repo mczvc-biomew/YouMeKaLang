@@ -234,6 +234,16 @@ print v1 + v2;
 print "";
 
 
+print "# Null Coalescing";
+var user = { name: "Meldencio" };
+print user?.name ?? "Guest";
+
+var nothing = null;
+print nothing?.name ?? "Guest";
+
+print "";
+
+
 print "# Comparison";
 var noReturn = || {};
 print "var noReturn = || {};";
