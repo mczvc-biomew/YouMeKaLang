@@ -17,6 +17,7 @@ public enum TokenType {
   LESS, LESS_EQUAL,
   MINUS_EQUAL, MINUS_MINUS,
   PLUS_EQUAL, PLUS_PLUS,
+  PERCENT,
 
   // Literals.
   IDENTIFIER, STRING, NUMBER,
