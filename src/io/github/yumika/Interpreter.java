@@ -55,7 +55,7 @@ public class Interpreter implements
   }
 
   void initGlobalDefinitions(Environment globalEnv) {
-    globalEnv.define("undefined", new YmkUndefined());
+    globalEnv.define("undefined", YmkUndefined.INSTANCE);
     globalEnv.define("__builtins__", Builtins.loadBuiltins(this));
   }
 
@@ -925,6 +925,15 @@ public class Interpreter implements
   }
 
   @Override
+  public Object visitNullCoalesceExpr(Expr.NullCoalesce expr) {
+    Object left = evaluate(expr.left);
+    if (left == null || left == YmkUndefined.INSTANCE) {
+      return evaluate(expr.right);
+    }
+    return left;
+  }
+
+  @Override
   public Object visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     YmkClass objectLiteralKlass = new YmkClass("Object", null, new HashMap<>());
     YmkInstance self = new YmkInstance(objectLiteralKlass);
@@ -966,6 +975,15 @@ public class Interpreter implements
       }
     }
     return self;
+  }
+
+  @Override
+  public Object visitOptionalGetExpr(Expr.OptionalGet expr) {
+    Object object = evaluate(expr.object);
+    if (object == null || object == YmkUndefined.INSTANCE) {
+      return YmkUndefined.INSTANCE;
+    }
+    return getProperty(object, expr.name);
   }
 
   @Override
@@ -1151,6 +1169,33 @@ public class Interpreter implements
     if (value instanceof YmkInstance) return "Object";
 
     return "Unknown";
+  }
+
+  public Object getProperty(Object object, Token property) {
+    String name = property.lexeme;
+
+    if (object instanceof YmkInstance instance) {
+      return instance.get(property, this);
+    }
+
+    if (object instanceof JavaInstanceWrapper wrapper) {
+      return wrapper.get(name);
+    }
+
+    if (object instanceof Map map) {
+      return map.getOrDefault(name, YmkUndefined.INSTANCE);
+    }
+
+    if (object instanceof List<?> list) {
+      try {
+        int index = Integer.parseInt(name);
+        return list.get(index);
+      } catch (NumberFormatException | IndexOutOfBoundsException e) {
+        return YmkUndefined.INSTANCE;
+      }
+    }
+
+    throw new RuntimeError(property, "Cannot access property '" + name + "' on type: " + getTypeName(object));
   }
 
   private boolean isTruthy(Object object) {
