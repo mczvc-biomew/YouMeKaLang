@@ -26,6 +26,7 @@ class Scanner {
     keywords.put("import", IMPORT);
     keywords.put("in", IN);
     keywords.put("or", OR);
+    keywords.put("match", MATCH);
     keywords.put("new", NEW);
     keywords.put("not", NOT);
     keywords.put("null", NULL);
