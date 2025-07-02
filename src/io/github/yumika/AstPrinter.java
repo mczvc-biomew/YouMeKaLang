@@ -210,6 +210,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitMatchExpr(Expr.Match expr) {
+    return parenthesize2("match", expr.value, expr.cases);
+  }
+
+  @Override
   public String visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
     return parenthesize2("new", expr.type, expr.size);
   }
