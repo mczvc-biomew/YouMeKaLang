@@ -105,9 +105,10 @@ abstract class Stmt {
   }
 
   static class Function extends Stmt {
-    Function(Token name, List<Token> params, List<Token> paramTypes,
+    Function(Token name, List<Expr> decorators, List<Token> params, List<Token> paramTypes,
         Token returnType, List<Stmt> body) {
       this.name = name;
+      this.decorators = decorators;
       this.params = params;
       this.paramTypes = paramTypes;
       this.returnType = returnType;
@@ -118,11 +119,12 @@ abstract class Stmt {
       this.kwArgsName = null;
     }
 
-    Function(Token name, List<Token> params, List<Token> paramTypes,
+    Function(Token name, List<Expr> decorators, List<Token> params, List<Token> paramTypes,
         Token returnType, List<Stmt> body,
         boolean hasVarArgs, boolean hasVarKwargs,
         Token varArgsName, Token kwArgsName) {
       this.name = name;
+      this.decorators = decorators;
       this.params = params;
       this.paramTypes = paramTypes;
       this.returnType = returnType;
@@ -137,6 +139,7 @@ abstract class Stmt {
     <R> R accept(Visitor<R> visitor) { return visitor.visitFunctionStmt(this); }
 
     final Token name;
+    final List<Expr> decorators;
     final List<Token> params;
     final List<Token> paramTypes;
     final Token returnType;
