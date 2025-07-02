@@ -9,7 +9,7 @@ public enum TokenType {
   PIPE, SEMICOLON, SLASH, STAR,
 
   // One, two, or three character tokens.
-  ARROW,
+  ARROW, AT,
   BANG, BANG_EQUAL,
   DOT_DOT_DOT,
   EQUAL, EQUAL_EQUAL,
