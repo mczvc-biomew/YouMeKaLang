@@ -35,6 +35,7 @@ public class YmkInstance {
   }
 
   Map<String, Object> getFields() { return fields; }
+  YmkClass getKlass() { return this.klass; }
 
   protected void set(Token name, Object value, Interpreter interpreter) { set(name.lexeme, value, interpreter); }
   void set(String name, Object value, Interpreter interpreter) {
