@@ -39,6 +39,7 @@ class Scanner {
     keywords.put("throw", THROW);
     keywords.put("true", TRUE);
     keywords.put("try", TRY);
+    keywords.put("type", TYPE);
     keywords.put("undefined", UNDEFINED);
     keywords.put("var", VAR);
     keywords.put("when", WHEN);
