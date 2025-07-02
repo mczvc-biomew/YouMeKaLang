@@ -17,14 +17,14 @@ print Math.pow(15, 1) * 2;
 
 puts "Full name: ";
 var {name, middle = "Corrales", last} = { name: "Luqas Matt", last: "Noces" };
-print name + " " + middle + " " + last;
+print `${name} ${middle} ${last}`;
 print "";
 
 import modules.helloWorld as hw;
 
 print "Start";
 setTimeout(|| { print "Hi after 1s"; }, 1000);
-var id = setInterval(|count| { print "tick" + "." * (4 - count); }, 500);
+var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
 
 setTimeout(|| clearTimeout(id), 2000);
 
@@ -35,7 +35,7 @@ print hw.hello()["world"];
 print "Does capture local variable";
 var greetings = hw.hello()["greetings"];
 print "Hi!";
-puts str(greetings, "says:");
+puts `${greetings} says: `;
 // print env();
 print greetings();
 print env();
@@ -43,8 +43,17 @@ print "";
 
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
-print "hw.hello is:";
-puts typeof(hw.hello); puts " that returns "; puts typeof(hw.hello());
+print `hw.hello is: ${typeof(hw.hello)} that returns ${typeof(hw.hello())}`;
+print "";
+
+
+var obj = {name: "YouMeKa", version: 1.0};
+if ("name" in obj) print obj.name;
+
+var nums = [1, 2, 3];
+if (2 in nums) print "2 is in list";
+
+if ("Me" in "YouMeKa") print "Me found in 'YouMeKa'";
 print "";
 
 
