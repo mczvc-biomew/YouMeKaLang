@@ -37,16 +37,11 @@ public class Interpreter implements
     globals = new Environment();
     environment = globals;
 
-    initGlobalDefinitions(globals);
-    initJavaPackage(globals);
   }
 
   Interpreter(Environment env) {
     this.globals = env;
     environment = globals;
-
-    initGlobalDefinitions(globals);
-    initJavaPackage(globals);
   }
 
   void initJavaPackage(Environment globals) {
@@ -367,6 +362,13 @@ public class Interpreter implements
 
   @Override
   public Void visitImportStmt(Stmt.Import stmt) {
+    String alias = stmt.alias != null ? stmt.alias.lexeme : stmt.path.lexeme;
+
+    if (environment.exists(alias)) {
+      System.err.println("Warning: '"  + alias + "' already imported." + stmt.alias.line);
+      return null;
+    }
+
     if (stmt.path.lexeme.startsWith("java.")) {
       return null;
     }
