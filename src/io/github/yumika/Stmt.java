@@ -17,6 +17,7 @@ abstract class Stmt {
     R visitReturnStmt(Return stmt);
     R visitThrowStmt(Throw stmt);
     R visitTryCatchStmt(TryCatch stmt);
+    R visitTypeDefStmt(TypeDef stmt);
     R visitVarStmt(Var stmt);
     R visitWhileStmt(While stmt);
   }
@@ -236,9 +237,25 @@ abstract class Stmt {
     final List<Stmt> catchBlock;
   }
 
-  static class Var extends Stmt {
-    Var(Token name, Expr initializer) {
+  static class TypeDef extends Stmt {
+    TypeDef(Token name, Expr definition) {
       this.name = name;
+      this.definition = definition;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitTypeDefStmt(this);
+    }
+
+    final Token name;
+    final Expr definition;
+  }
+
+  static class Var extends Stmt {
+    Var(Token name, Token type, Expr initializer) {
+      this.name = name;
+      this.type = type;
       this.initializer = initializer;
     }
 
@@ -246,6 +263,7 @@ abstract class Stmt {
     <R> R accept(Visitor<R> visitor) { return visitor.visitVarStmt(this); }
 
     final Token name;
+    final Token type;
     final Expr initializer;
   }
 
