@@ -187,7 +187,8 @@ abstract class Expr {
   }
 
   static class Function extends Expr {
-    Function(List<Token> params, List<Token> paramTypes, Token returnType, List<Stmt> body) {
+    Function(List<Expr> decorators, List<Token> params, List<Token> paramTypes, Token returnType, List<Stmt> body) {
+      this.decorators = decorators;
       this.params = params;
       this.paramTypes = paramTypes;
       this.returnType = returnType;
@@ -198,10 +199,11 @@ abstract class Expr {
       this.kwArgsName = null;
     }
 
-    Function(List<Token> params, List<Token> paramTypes,
+    Function(List<Expr> decorators, List<Token> params, List<Token> paramTypes,
         Token returnType, List<Stmt> body,
         boolean hasVarArgs, boolean hasVarKwargs,
         Token varArgsName, Token kwArgsName) {
+      this.decorators = decorators;
       this.params = params;
       this.paramTypes = paramTypes;
       this.returnType = returnType;
@@ -215,6 +217,7 @@ abstract class Expr {
     @Override
     <R> R accept(Visitor<R> visitor) { return visitor.visitFunctionExpr(this); }
 
+    final List<Expr> decorators;
     final List<Token> params;
     final List<Token> paramTypes;
     final Token returnType;
