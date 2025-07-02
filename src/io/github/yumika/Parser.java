@@ -587,6 +587,20 @@ class Parser {
       return new Expr.Literal(previous().literal);
     }
 
+    if (match(TEMPLATE_STRING)) {
+      List<Object> parts = (List<Object>) previous().literal;
+      List<Expr> expressions = new ArrayList<>();
+
+      for (Object part : parts) {
+        if (part instanceof String str) {
+          expressions.add(new Expr.Literal(str));
+        } else if (part instanceof Token token) {
+          expressions.add(parseTemplateExpr(token));
+        }
+      }
+      return new Expr.InterpolatedString(expressions);
+    }
+
     if (match(SUPER)) {
       Token keyword = previous();
       consume(DOT, "Expect '.' after 'super'.");
@@ -961,6 +975,15 @@ class Parser {
     }
     consume(RIGHT_BRACE, "Expect '}' after object literal.");
     return new Expr.ObjectLiteral(properties);
+  }
+
+  private Expr parseTemplateExpr(Token token) {
+    String exprSource = token.lexeme;
+    Scanner scanner = new Scanner(exprSource);
+    List<Token> innerTokens = scanner.scanTokens();
+
+    Parser subParser = new Parser(innerTokens);
+    return subParser.expression();
   }
 
   private boolean match(TokenType... types) {
