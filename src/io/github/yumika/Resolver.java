@@ -337,6 +337,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitInterpolatedStringExpr(Expr.InterpolatedString expr) {
+    for (Expr part : expr.parts) {
+      resolve(part);
+    }
+    return null;
+  }
+
+  @Override
   public Void visitLambdaExpr(Expr.Lambda expr) {
     FunctionType enclosingFunction = currentFunction;
     currentFunction = FunctionType.LAMBDA;
