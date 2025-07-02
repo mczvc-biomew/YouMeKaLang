@@ -79,7 +79,7 @@ public class YmkFunction implements YmkCallable {
   @Override
   public Object call(Interpreter interpreter,
                      List<Object> arguments) {
-    Environment environment = new Environment(closure);
+    Environment closure = new Environment(this.closure);
     int normalParamCount = params.size();
     // standard args
     // Normal arguments
@@ -89,15 +89,26 @@ public class YmkFunction implements YmkCallable {
       Object argValue = arguments.get(i);
 
       if (paramType != null) {
-        String expected = paramType.lexeme;
-        if (!interpreter.isTypeMatch(argValue, expected)) {
-          throw new RuntimeError(param,
-              "TypeError: Expected argument of type '" + expected + "', got '" +
-              interpreter.getTypeName(argValue) + "'");
+        try {
+          Object expectedType = closure.get(paramType.lexeme);
+          if (!interpreter.isTypeMatchAgainstDef(argValue, expectedType)) {
+            throw new RuntimeError(param,
+                "TypeError: Expected argument of type '"
+                    + paramType.lexeme + interpreter.stringify(expectedType) + "', got: " +
+                    interpreter.stringify(argValue));
+          }
+        } catch (RuntimeError.UndefinedException error) {
+          String expected = paramType.lexeme;
+          if (!interpreter.isTypeMatch(argValue, expected)) {
+            throw new RuntimeError(param,
+                "TypeError: Expected argument of type '" + expected + "', got '" +
+                    interpreter.getTypeName(argValue) + "'");
+
+          }
         }
       }
 
-      environment.define(params.get(i).lexeme,
+      closure.define(params.get(i).lexeme,
           arguments.get(i));
     }
 
@@ -117,7 +128,7 @@ public class YmkFunction implements YmkCallable {
         varArgs.add(arguments.get(i));
       }
 
-      environment.define(varArgsName.lexeme, varArgs);
+      closure.define(varArgsName.lexeme, varArgs);
     }
 
     // **kwargs (last arg is expected to be Map<String, Object>)
@@ -127,16 +138,16 @@ public class YmkFunction implements YmkCallable {
         throw new RuntimeError(varArgsName,
             "**kwargs must be passed as map.");
       }
-      environment.define(kwArgsName.lexeme, lastArg);
+      closure.define(kwArgsName.lexeme, lastArg);
     }
 
     try {
-      interpreter.executeBlock(body, environment);
+      interpreter.executeBlock(body, closure);
 
     // catch-return
     } catch (Return returnValue) {
       // Classes early-return-this
-      if (isInitializer) return closure.getAt(0, "this");
+      if (isInitializer) return this.closure.getAt(0, "this");
 
       if (returnType != null) {
         String expected = returnType.lexeme;
@@ -151,7 +162,7 @@ public class YmkFunction implements YmkCallable {
     }
 
     // Classes return-this
-    if (isInitializer) return closure.getAt(0, "this");
+    if (isInitializer) return this.closure.getAt(0, "this");
     return null;
   }
 }
