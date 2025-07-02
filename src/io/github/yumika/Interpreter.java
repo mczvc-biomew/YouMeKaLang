@@ -339,6 +339,15 @@ public class Interpreter implements
     YmkFunction function = new YmkFunction(stmt, environment,
         false);
 
+    Object decorated = function;
+    for (int i = stmt.decorators.size() - 1; i >= 0; i--) {
+      Object deco = evaluate(stmt.decorators.get(i));
+      if (!(deco instanceof YmkCallable)) {
+        throw new RuntimeError(null, "Decorator must be callable.");
+      }
+      decorated = ((YmkCallable)deco).call(this, List.of(decorated));
+    }
+
     // Classes construct-function
     environment.define(stmt.name.lexeme, function);
     return null;
