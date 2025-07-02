@@ -109,6 +109,25 @@ fun callCaller() {
 callCaller();
 print "fun () { return 42; }";
 print fun () { return 42; };
+
+fun memoize(fn) {
+    var cache = {};
+    return |x| {
+        if (x in cache) return cache[x];
+        var result = fn(x);
+        cache[x] = result;
+        return result;
+    };
+}
+
+@memoize
+fun fib(n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
+print fib(10);
+
 print "";
 
 var newStrs = new string[50];
@@ -231,8 +250,8 @@ var v2 = Vector(3, 4);
 
 print str(v1) + " + " + str(v2);
 print v1 + v2;
-
 print "";
+
 
 print "# Pattern matching";
 var value = [1, 2];
