@@ -149,8 +149,11 @@ class Scanner {
       // < whitespace
 
       // string start
-      case '"': string(); break;
+      case '\'':
+      case '"': string(previous()); break;
       // < string start
+
+      case '`': templateString(); break;
 
       // char-error
       default:
@@ -196,11 +199,27 @@ class Scanner {
         Double.parseDouble(source.substring(start, current)));
   }
 
-  private void string() {
+  private void string(char quote) {
     // Multi-line string
-    while (peek() != '"' && !isAtEnd()) {
+    StringBuilder value = new StringBuilder();
+    while (peek() != quote && !isAtEnd()) {
+      if (match('\\')) {
+        if (isAtEnd()) break;
+        char esc = advance();
+        switch (esc) {
+          case 'n' -> value.append('\n');
+          case 't' -> value.append('\t');
+          case 'r' -> value.append('\r');
+          case '\\' -> value.append('\\');
+          case '\'' -> value.append('\'');
+          case '\"' -> value.append('\"');
+          default -> value.append(esc);
+        }
+      } else {
+        value.append(advance());
+      }
       if (peek() == '\n') line++;
-      advance();
+//      advance();
     }
 
     if (isAtEnd()) {
@@ -211,8 +230,48 @@ class Scanner {
     // The closing (").
     advance();
 
-    String value = source.substring(start + 1, current - 1);
-    addToken(STRING, value);
+//    String value = source.substring(start + 1, current - 1);
+    addToken(STRING, value.toString());
+  }
+
+  private void templateString() {
+    int start = current;
+    StringBuilder builder = new StringBuilder();
+    List<Object> parts = new ArrayList<>();
+
+    while (!isAtEnd()) {
+      if (peek() == '`') {
+        advance();
+        break;
+      }
+
+      if (peek() == '$' && peekNext() == '{') {
+        current += 2;
+        if (builder.length() > 0) {
+          parts.add(builder.toString());
+          builder.setLength(0);
+        }
+
+        int exprStart = current;
+        int depth = 1;
+        while (!isAtEnd() && depth > 0) {
+          char c = advance();
+          if (c == '{') depth++;
+          else if (c == '}') depth--;
+        }
+
+        String expr = source.substring(exprStart, current - 1);
+        parts.add(new Token(TEMPLATE_STRING, expr, null, line));
+      } else {
+        builder.append(advance());
+      }
+    }
+
+    if (builder.length() > 0) {
+      parts.add(builder.toString());
+    }
+
+    addToken(TEMPLATE_STRING, parts);
   }
 
   private boolean match(char expected) {
@@ -245,6 +304,10 @@ class Scanner {
   private boolean isDigit(char c) { return c >= '0' && c <= '9'; }
 
   private boolean isAtEnd() { return current >= source.length(); }
+
+  private char previous() {
+    return source.charAt(current - 1);
+  }
 
   private char advance() { return source.charAt(current++);}
 
