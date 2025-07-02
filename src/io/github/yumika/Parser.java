@@ -36,6 +36,8 @@ class Parser {
 
       if (match(VAR)) return varDeclaration();
 
+      if (match(TYPE)) return typeDefinition();
+
       return statement();
     } catch (ParseError error) {
       synchronize();
@@ -244,6 +246,20 @@ class Parser {
     return new Stmt.TryCatch(tryBlock, errorVar, catchBlock);
   }
 
+  private Stmt typeDefinition() {
+    Token name = consume(IDENTIFIER, "Expect type name.");
+    consume(EQUAL, "Expect '=' after type name.");
+
+    Expr structure = parseTypeStructure();
+    consume(SEMICOLON, "Expect ';' after type definition.");
+
+    return new Stmt.TypeDef(name, structure);
+  }
+
+  private Expr parseTypeStructure() {
+    return parsePattern();
+  }
+
   private Stmt varDeclaration() {
     if (match(TokenType.LEFT_BRACE)) {
       // object destructuring: var {a, b, c = "default"} = expr;
@@ -256,6 +272,11 @@ class Parser {
 
     Token name = consume(IDENTIFIER, "Expect variable name.");
 
+    Token typeAnnotation = null;
+    if (match(COLON)) {
+      typeAnnotation = consume(IDENTIFIER, "Expect type name after ':'.");
+    }
+
     Expr initializer = null;
     if (match(EQUAL)) {
       initializer = expression();
@@ -263,7 +284,7 @@ class Parser {
 
     consume(SEMICOLON, "Expect ';' after variable declaration.");
 
-    return new Stmt.Var(name, initializer);
+    return new Stmt.Var(name, typeAnnotation, initializer);
   }
 
   private List<Stmt.DestructuringVarStmt.DestructuringField> parseDestructuringPattern() {
