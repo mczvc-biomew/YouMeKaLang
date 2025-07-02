@@ -341,6 +341,7 @@ public class Interpreter implements
 
     Object decorated = function;
     for (int i = stmt.decorators.size() - 1; i >= 0; i--) {
+      resolveLogical(stmt.decorators.get(i), 0);
       Object deco = evaluate(stmt.decorators.get(i));
       if (!(deco instanceof YmkCallable)) {
         throw new RuntimeError(null, "Decorator must be callable.");
@@ -349,7 +350,7 @@ public class Interpreter implements
     }
 
     // Classes construct-function
-    environment.define(stmt.name.lexeme, function);
+    environment.define(stmt.name.lexeme, decorated);
     return null;
   }
 
@@ -542,7 +543,7 @@ public class Interpreter implements
 
       return value;
     } else if (arrayOrMapOrObjInstance instanceof YmkInstance instance) {
-      String key = ((String) index);
+      String key = index.toString();
       instance.set(key, value, this);
 
       return value;
@@ -586,7 +587,7 @@ public class Interpreter implements
       return map.get(key);
     } else if (arrayOrMapOrObjInstance instanceof YmkInstance instance) {
 //      YmkInstance instance = (YmkInstance) arrayOrMapOrObjInstance;
-      String key = ((String) index);
+      String key = index.toString();
       if (!instance.containsField(key)) {
         throw new RuntimeError(expr.bracket,
             "Object doesn't contain field: " + key);
@@ -707,6 +708,28 @@ public class Interpreter implements
           return repeatString((String) right, (int) ((double) left));
         }
         throw new RuntimeError(expr.operator, "Operands must be two numbers or string * number.");
+      case IN:
+        if (right instanceof Map<?, ?> map) {
+          return map.containsKey(left);
+        }
+        if (right instanceof List<?> list) {
+          return list.contains(left);
+        }
+        if (right instanceof String str && left instanceof String sub) {
+          return str.contains(sub);
+        }
+        if (right instanceof YmkInstance inst) {
+          if (!(left instanceof String || left instanceof Double)) {
+            throw new RuntimeError(expr.operator, "Left operand of 'in' must be a string when checking object keys.");
+          }
+          String key = left.toString();
+
+          // Check field or method existence
+          if (inst.getFields().containsKey(key)) return true;
+          if (inst.getKlass().findMethod(key) != null) return true;
+          return false;
+        }
+        throw new RuntimeError(expr.operator, "'in' requires a list, map, or string.");
     }
 
     throw new RuntimeError(expr.operator,
