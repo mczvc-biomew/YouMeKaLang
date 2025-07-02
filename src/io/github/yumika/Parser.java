@@ -25,7 +25,7 @@ class Parser {
   }
 
   private Expr expression() {
-    return nullCoalesce();
+    return matchExpr();
   }
 
   private Stmt declaration() {
@@ -714,6 +714,67 @@ class Parser {
     }
     return new Expr.Lambda(parameters, paramTypes, returnType, body);
   }
+
+  private Expr matchExpr() {
+    if (!match(MATCH)) return nullCoalesce();
+
+    Expr matchedValue = expression();
+    consume(LEFT_BRACE, "Expect '{' after match value.");
+
+    List<Expr.MatchCase> cases = new ArrayList<>();
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      boolean isElse = match(ELSE);
+      if (!isElse) consume(WHEN, "Expect 'when' or 'else'.");
+
+      Expr pattern = isElse ? null : parsePattern();
+      consume(ARROW, "Expect '=>' after pattern");
+      Expr body = expression();
+      consume(SEMICOLON, "Expect ';' after match case.");
+
+      cases.add(new Expr.MatchCase(pattern, body, isElse));
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after match cases.");
+    return new Expr.Match(matchedValue, cases);
+  }
+
+  private Expr parsePattern() {
+    // Match object pattern: { key, key2 }
+    if (match(TokenType.LEFT_BRACE)) {
+      List<Expr.ObjectLiteral.Property> fields = new ArrayList<>();
+      if (!check(TokenType.RIGHT_BRACE)) {
+        do {
+          Token name = consume(TokenType.IDENTIFIER, "Expect identifier in object pattern.");
+          // Pattern bindings: { x } → treat as variable ref
+          Expr value;
+          if (match(COLON)) {
+            value = parsePattern();
+          } else {
+            value = new Expr.Variable(name);
+          }
+          fields.add(new Expr.ObjectLiteral.Pair(name, value));
+        } while (match(TokenType.COMMA));
+      }
+      consume(TokenType.RIGHT_BRACE, "Expect '}' after object pattern.");
+      return new Expr.ObjectLiteral(fields);
+    }
+
+    // Match array pattern: [1, x, _]
+    if (match(TokenType.LEFT_BRACKET)) {
+      List<Expr> elements = new ArrayList<>();
+      if (!check(TokenType.RIGHT_BRACKET)) {
+        do {
+          elements.add(parsePattern());  // Support nested patterns
+        } while (match(TokenType.COMMA));
+      }
+      consume(TokenType.RIGHT_BRACKET, "Expect ']' after list pattern.");
+      return new Expr.ListLiteral(elements);
+    }
+
+    // Fallback to variable or literal
+    return assignment();  // handles numbers, strings, identifiers
+  }
+
 
   private Expr newObject() {
     Token klass = consume(IDENTIFIER, "Expect class name");
