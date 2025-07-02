@@ -15,6 +15,7 @@ abstract class Expr {
     R visitFunctionExpr(Function expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
+    R visitInterpolatedStringExpr(InterpolatedString expr);
     R visitLambdaExpr(Lambda expr);
     R visitListComprehensionExpr(ListComprehension expr);
     R visitListLiteralExpr(ListLiteral expr);
@@ -248,6 +249,15 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitGroupingExpr(this); }
 
     final Expr expression;
+  }
+
+  static class InterpolatedString extends Expr {
+    InterpolatedString(List<Expr> parts) {
+      this.parts = parts;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitInterpolatedStringExpr(this); }
+    final List<Expr> parts;
   }
 
   static class Lambda extends Expr {
