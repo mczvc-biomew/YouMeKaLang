@@ -92,14 +92,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     beginScope();
     scopes.peek().put("this", true);
 
-    for (Stmt.Function method : stmt.methods) {
+    for (Map.Entry<String, Stmt.Function> method : stmt.methods.entrySet()) {
       FunctionType declaration = FunctionType.METHOD;
 
-      if (method.name.lexeme.equals("init")) {
+      if (method.getKey().equals("init")) {
         declaration = FunctionType.INITIALIZER;
       }
 
-      resolveFunction(method, declaration);
+      resolveFunction(method.getValue(), declaration);
     }
 
     // resolver-end-this-scope
@@ -166,6 +166,18 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 
+  @Override
+  public Void visitInterfaceStmt(Stmt.Interface stmt) {
+    declare(stmt.name);
+    define(stmt.name);
+
+    for (Stmt.Function method : stmt.methods) {
+      declare(method.name);
+      define(method.name);
+    }
+
+    return null;
+  }
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
