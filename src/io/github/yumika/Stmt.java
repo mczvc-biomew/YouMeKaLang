@@ -1,6 +1,7 @@
 package io.github.yumika;
 
 import java.util.List;
+import java.util.Map;
 
 abstract class Stmt {
   interface Visitor<R> {
@@ -12,6 +13,7 @@ abstract class Stmt {
     R visitFunctionStmt(Function stmt);
     R visitIfStmt(If stmt);
     R visitImportStmt(Import stmt);
+    R visitInterfaceStmt(Interface stmt);
     R visitPrintStmt(Print stmt);
     R visitPutsStmt(Puts stmt);
     R visitReturnStmt(Return stmt);
@@ -59,8 +61,10 @@ abstract class Stmt {
   static class Class extends Stmt {
     Class(Token name,
           Expr.Variable superclass,
-          List<Stmt.Function> methods) {
+          List<Token> interfaces,
+          Map<String, Function> methods) {
       this.name = name;
+      this.interfaces = interfaces;
       this.superclass = superclass;
       this.methods = methods;
     }
@@ -70,7 +74,8 @@ abstract class Stmt {
 
     final Token name;
     final Expr.Variable superclass;
-    final List<Stmt.Function> methods;
+    final List<Token> interfaces;
+    final Map<String, Stmt.Function> methods;
   }
 
  static class DestructuringVarStmt extends Stmt {
@@ -179,6 +184,20 @@ abstract class Stmt {
     final Token path;
     final List<Token> pathParts;
     final Token alias;
+  }
+
+  static class Interface extends Stmt {
+    Interface(Token name, List<Stmt.Function> methods) {
+      this.name = name;
+      this.methods = methods;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitInterfaceStmt(this);
+    }
+    final Token name;
+    final List<Stmt.Function> methods;
   }
 
   static class Print extends Stmt {
