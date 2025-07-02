@@ -25,6 +25,7 @@ class Scanner {
     keywords.put("if", IF);
     keywords.put("import", IMPORT);
     keywords.put("in", IN);
+    keywords.put("interface", INTERFACE);
     keywords.put("or", OR);
     keywords.put("match", MATCH);
     keywords.put("new", NEW);
@@ -87,7 +88,7 @@ class Scanner {
       case '|': addToken(PIPE); break;
       case ':': addToken(COLON); break;
       case ';': addToken(SEMICOLON); break;
-      case '*': addToken(STAR); break;
+      case '*': addToken(match('*') ? STAR_STAR : STAR); break;
       // two-char-tokens
       case '-':
         if (match('=')) {
