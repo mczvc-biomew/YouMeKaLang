@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   String print(Expr expr) { return expr.accept(this); }
@@ -45,8 +46,8 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
       builder.append(" < " + print(stmt.superclass));
     }
 
-    for (Stmt.Function method : stmt.methods) {
-      builder.append(" " + print(method));
+    for (Map.Entry<String, Stmt.Function> method : stmt.methods.entrySet()) {
+      builder.append(" " + print(method.getValue()));
     }
 
     builder.append(")");
@@ -95,6 +96,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   @Override
   public String visitImportStmt(Stmt.Import stmt) {
     return parenthesize2("import", stmt.pathParts, stmt.alias);
+  }
+
+  @Override
+  public String visitInterfaceStmt(Stmt.Interface stmt) {
+    return parenthesize2("interface", stmt.name, stmt.methods);
   }
 
   @Override
