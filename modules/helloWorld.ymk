@@ -9,3 +9,14 @@ fun hello() {
         greetings3: || this.greetings2() + "!"
     };
 }
+
+interface Greeter {
+    greet(msg: string);
+}
+
+class ConcreteGreeter > Greeter {}
+class CompleteGreeter > Greeter {
+    greet(msg: string) {
+        print msg;
+    }
+}
