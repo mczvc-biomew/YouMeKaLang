@@ -9,7 +9,7 @@
 * Class (Object oriented programming)
 * If, Case conditional expressions + (and, or, not binary operators)
 * Try / Catch error handling, (throw exceptions)!
-* Array, Number, Boolean, String Literals
+* Number, Boolean, String (Template, interpolation), Array, Object Literals
 * Python-like list comprehension
   * spread list operator
 * Object Literals
