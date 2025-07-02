@@ -35,6 +35,7 @@ public class YmkInstance {
   }
 
   Map<String, Object> getFields() { return fields; }
+  YmkClass getKlass() { return this.klass; }
 
   protected void set(Token name, Object value, Interpreter interpreter) { set(name.lexeme, value, interpreter); }
   void set(String name, Object value, Interpreter interpreter) {
@@ -52,6 +53,14 @@ public class YmkInstance {
 
   void defineSetter(String name, YmkFunction fn) {
     setters.put(name, fn);
+  }
+
+  Object getOverload(String methodName, Interpreter interpreter) {
+    try {
+      return get(new Token(TokenType.IDENTIFIER, methodName, null, 0), interpreter);
+    } catch (RuntimeError e) {
+      return null;
+    }
   }
 
   @Override

@@ -52,6 +52,13 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
     builder.append(")");
     return builder.toString();
   }
+
+  @Override
+  public String visitDestructuringVarStmt(Stmt.DestructuringVarStmt stmt) {
+    // @TODO: loop through fields
+    return parenthesize2("destructuring var" + stmt.fields, stmt.initializer);
+  }
+
   @Override
   public String visitExpressionStmt(Stmt.Expression stmt) { return parenthesize(";", stmt.expression) ; }
 
@@ -203,8 +210,23 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitMatchExpr(Expr.Match expr) {
+    return parenthesize2("match", expr.value, expr.cases);
+  }
+
+  @Override
   public String visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
     return parenthesize2("new", expr.type, expr.size);
+  }
+
+  @Override
+  public String visitNullCoalesceExpr(Expr.NullCoalesce expr) {
+    return parenthesize2("??", expr.left, expr.operator, expr.right);
+  }
+
+  @Override
+  public String visitOptionalGetExpr(Expr.OptionalGet expr) {
+    return parenthesize2("?.", expr.object, expr.name);
   }
 
   @Override

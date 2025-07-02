@@ -7,6 +7,9 @@ public class RuntimeError extends RuntimeException {
     UndefinedException(Token name, String message) {
       super(name, message);
     }
+    UndefinedException(UndefinedException undefEx) {
+      super(undefEx.token, undefEx.getMessage());
+    }
   }
 
   static class ReferenceError extends RuntimeError {

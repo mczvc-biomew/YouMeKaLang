@@ -15,7 +15,18 @@ puts list.get(0) + " ";
 import java.lang.Math;
 print Math.pow(15, 1) * 2;
 
+puts "Full name: ";
+var {name, middle = "Corrales", last} = { name: "Luqas Matt", last: "Noces" };
+print name + " " + middle + " " + last;
+print "";
+
 import modules.helloWorld as hw;
+
+print "Start";
+setTimeout(|| { print "Hi after 1s"; }, 1000);
+var id = setInterval(|count| { print "tick" + "." * (4 - count); }, 500);
+
+setTimeout(|| clearTimeout(id), 2000);
 
 print "H-i and H-e-l-l-o";
 hw.hello();
@@ -38,10 +49,10 @@ print "";
 
 
 // lambda
-var add = |a,b| a+b;
-var triple = |x| x*3;
-var always = || 42;
-var HelloWorld = || { return "Hello" + " || " + "World!"; };
+var add = |a:number, b:number| a+b;
+var triple = |x: number| x*3;
+var always = ||: number 42;
+var HelloWorld = ||: string { return "Hello" + " || " + "World!"; };
 
 puts "1 add 2 is ";
 print add(1,2);
@@ -74,7 +85,7 @@ print "";
 
 print "# Functions";
 
-fun caller(g) {
+fun caller(g: function) {
   g();
   // g should be a function, not null.
   print g == null; // expect: false
@@ -97,7 +108,27 @@ fun callCaller() {
 
 callCaller();
 print "fun () { return 42; }";
-print fun () { return 42; };
+print (fun () { return 42; })();
+
+fun memoize(fn) {
+    var cache = {};
+    return |x| {
+        if (x in cache) return cache[x];
+        var result = fn(x);
+        cache[x] = result;
+        return result;
+    };
+}
+
+@memoize
+fun fib(n) {
+    if (n < 2) return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
+puts "fibonacci(30) is ";
+print fib(30);
+
 print "";
 
 var newStrs = new string[50];
@@ -108,6 +139,7 @@ print ["hello"];
 puts str(["[Hello World]"]) + "x";
 print length(newStrs);
 print "";
+
 
 print "# Postfix & Prefix";
 var i = 0;
@@ -121,6 +153,7 @@ var j = i + 42;
 print j;
 print "";
 
+
 print "# Compound assignment";
 var j = 0;
 puts str(j) + ", ";
@@ -129,6 +162,7 @@ puts str(j) + ", ";
 j -= 1;
 print str(j);
 print "";
+
 
 print "# Spread";
 fun swimmer() {
@@ -165,6 +199,7 @@ obj.x = 100; // expects 42 (!!)
 print obj.x;
 print "";
 
+
 print "# Types";
 print typeof(i);
 print typeof(|| "");
@@ -173,6 +208,7 @@ print typeof({});
 print typeof(true == false);
 print typeof([]) == typeof(new string[0]);
 print "";
+
 
 print "# Class";
 class c {
@@ -195,6 +231,49 @@ d().foo();
 
 print typeof(newStrs) + "[" + str(length(newStrs)) + "]";
 // print true.__class__;
+
+class Vector {
+    init(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    __add__(other) {
+        return Vector(this.x + other.x, this.y + other.y);
+    }
+    __eq__(other) {
+        return this.x == other.x and this.y == other.y;
+    }
+}
+
+var v1 = Vector(1, 2);
+var v2 = Vector(3, 4);
+
+print str(v1) + " + " + str(v2);
+print v1 + v2;
+print "";
+
+
+print "# Pattern matching";
+var value = [1, 2];
+var value2 = {type: "Point", x: 3, y: 4};
+
+var result = match value2 {
+  when [1, x] => "head 1, tail " + x;
+  when {type: "Point", x, y} => x + y + 1;
+  when 42 => "The Answer";
+  else => "Unknown";
+};
+print result;
+print "";
+
+
+print "# Null Coalescing";
+var user = { name: "Meldencio" };
+print user?.name ?? "Guest";
+
+var nothing = null;
+print nothing?.name ?? "Guest";
 
 print "";
 

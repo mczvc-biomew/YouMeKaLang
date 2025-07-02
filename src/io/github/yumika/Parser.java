@@ -25,14 +25,14 @@ class Parser {
   }
 
   private Expr expression() {
-    return assignment();
+    return matchExpr();
   }
 
   private Stmt declaration() {
     try {
       if (match(CLASS)) return classDeclaration();
 
-      if (match(FUN)) return function("function");
+      if (check(AT) || match(FUN)) return functionStatement("function");
 
       if (match(VAR)) return varDeclaration();
 
@@ -56,7 +56,7 @@ class Parser {
 
     List<Stmt.Function> methods = new ArrayList<>();
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      methods.add(function("method"));
+      methods.add(functionStatement("method"));
     }
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
@@ -245,6 +245,15 @@ class Parser {
   }
 
   private Stmt varDeclaration() {
+    if (match(TokenType.LEFT_BRACE)) {
+      // object destructuring: var {a, b, c = "default"} = expr;
+      List<Stmt.DestructuringVarStmt.DestructuringField> fields = parseDestructuringPattern();
+      consume(TokenType.EQUAL, "Expect '=' after destructuring pattern.");
+      Expr initializer = expression();
+      consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+      return new Stmt.DestructuringVarStmt(fields, initializer);
+    }
+
     Token name = consume(IDENTIFIER, "Expect variable name.");
 
     Expr initializer = null;
@@ -255,6 +264,22 @@ class Parser {
     consume(SEMICOLON, "Expect ';' after variable declaration.");
 
     return new Stmt.Var(name, initializer);
+  }
+
+  private List<Stmt.DestructuringVarStmt.DestructuringField> parseDestructuringPattern() {
+    List<Stmt.DestructuringVarStmt.DestructuringField> fields = new ArrayList<>();
+    do {
+      Token name = consume(IDENTIFIER, "Expect identifier in destructuring pattern.");
+      Expr defaultValue = null;
+
+      if (match(EQUAL)) {
+        defaultValue = expression();
+      }
+      fields.add(new Stmt.DestructuringVarStmt.DestructuringField(name, defaultValue));
+    } while (match(COMMA));
+
+    consume(RIGHT_BRACE, "Expect '}' after destructuring pattern.");
+    return fields;
   }
 
   private Stmt whileStatement() {
@@ -272,10 +297,25 @@ class Parser {
     return new Stmt.Expression(expr);
   }
 
-  private Stmt.Function function(String kind) {
+  private Stmt.Function functionStatement(String kind) {
+    List<Expr> decorators = new ArrayList<>();
+    boolean decorated = false;
+
+    while (match(AT)) {
+      decorators.add(expression());
+      decorated = true;
+    }
+
+    if (decorated && !match(FUN)) {
+      error(peek(), "Expect 'fun'.");
+    }
+
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+
     List<Token> parameters = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    List<Expr> defaultValues = new ArrayList<>();
 
     boolean hasVarArgs = false;
     boolean hasVarKwargs = false;
@@ -301,14 +341,32 @@ class Parser {
         } else {
           parameters.add(
               consume(IDENTIFIER, "Expect parameter name."));
+
+          if (match(COLON)) {
+            Token type = consume(IDENTIFIER, "Expect type name.");
+            paramTypes.add(type);
+          } else {
+            paramTypes.add(null);
+          }
+
+          if (match(EQUAL)) {
+            defaultValues.add(expression());
+          } else {
+            defaultValues.add(null);
+          }
         }
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
+    Token returnType = null;
+    if (match(COLON)) {
+      returnType = consume(IDENTIFIER, "Expect return type.");
+    }
+
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
+    return new Stmt.Function(name, decorators, parameters, paramTypes, returnType, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
   }
 
   private List<Stmt> block() {
@@ -380,12 +438,24 @@ class Parser {
   }
 
   private Expr and() {
-    Expr expr = equality();
+    Expr expr = inclusion();
 
     while (match(AND)) {
       Token operator = previous();
-      Expr right = equality();
+      Expr right = inclusion();
       expr = new Expr.Logical(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  private Expr inclusion() {
+    Expr expr = equality();
+
+    while (match(IN)) {
+      Token operator = previous();
+      Expr right = equality();
+      expr = new Expr.Binary(expr, operator, right);
     }
 
     return expr;
@@ -493,6 +563,9 @@ class Parser {
               "Expect property name after '.'.");
           expr = new Expr.Get(expr, name);
         }
+      } else if (match(QUESTION_DOT)) {
+        Token name = consume(IDENTIFIER, "Expect property name after '?.'.");
+        expr = new Expr.OptionalGet(expr, name);
       } else {
         break;
       }
@@ -584,23 +657,53 @@ class Parser {
   }
 
   private Expr functionExpression(String kind) {
+    List<Expr> decorators = new ArrayList<>();
+
+    while (match(AT)) {
+      decorators.add(expression());
+    }
     consume(LEFT_PAREN, "Expect '(' after '" + kind + "'.");
     List<Token> parameters = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    List<Expr> defaultValues = new ArrayList<>();
+
     if (!check(RIGHT_PAREN)) {
       do {
         parameters.add(consume(IDENTIFIER,
             "Expect parameter name."));
+
+        if (match(COLON)) {
+          Token type = consume(IDENTIFIER, "Expect type name.");
+          paramTypes.add(type);
+        } else {
+          paramTypes.add(null);
+        }
+
+        if (match(EQUAL)) {
+          defaultValues.add(expression());
+        } else {
+          defaultValues.add(null);
+        }
       } while (match(COMMA));
     }
     consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+    Token returnType = null;
+    if (match(COLON)) {
+      returnType = consume(IDENTIFIER, "Expect return type.");
+    }
+
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Expr.Function(parameters, body);
+    return new Expr.Function(decorators, parameters, paramTypes, returnType, body);
 
   }
 
   private Expr lambda() {
     List<Token> parameters = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    List<Expr> defaultValues = new ArrayList<>();
+    Token returnType = null;
     // Handle |x| ...
     if (match(PIPE)) {
       if (!check(PIPE)) {
@@ -609,9 +712,26 @@ class Parser {
             error(peek(), "Maximum of 255 parameters.");
           }
           parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+
+          if (match(COLON)) {
+            Token type = consume(IDENTIFIER, "Expect type name.");
+            paramTypes.add(type);
+          } else {
+            paramTypes.add(null);
+          }
+
+          if (match(EQUAL)) {
+            defaultValues.add(expression());
+          } else {
+            defaultValues.add(null);
+          }
         } while (match(COMMA));
       }
       consume(PIPE, "Expect '|' after parameters.");
+
+      if (match(COLON)) {
+        returnType = consume(IDENTIFIER, "Expect return type.");
+      }
     } else {
       throw error(peek(), "Expect lambda parameters.");
     }
@@ -622,8 +742,69 @@ class Parser {
     } else {
       body = expression();
     }
-    return new Expr.Lambda(parameters, body);
+    return new Expr.Lambda(parameters, paramTypes, returnType, body);
   }
+
+  private Expr matchExpr() {
+    if (!match(MATCH)) return nullCoalesce();
+
+    Expr matchedValue = expression();
+    consume(LEFT_BRACE, "Expect '{' after match value.");
+
+    List<Expr.MatchCase> cases = new ArrayList<>();
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      boolean isElse = match(ELSE);
+      if (!isElse) consume(WHEN, "Expect 'when' or 'else'.");
+
+      Expr pattern = isElse ? null : parsePattern();
+      consume(ARROW, "Expect '=>' after pattern");
+      Expr body = expression();
+      consume(SEMICOLON, "Expect ';' after match case.");
+
+      cases.add(new Expr.MatchCase(pattern, body, isElse));
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after match cases.");
+    return new Expr.Match(matchedValue, cases);
+  }
+
+  private Expr parsePattern() {
+    // Match object pattern: { key, key2 }
+    if (match(TokenType.LEFT_BRACE)) {
+      List<Expr.ObjectLiteral.Property> fields = new ArrayList<>();
+      if (!check(TokenType.RIGHT_BRACE)) {
+        do {
+          Token name = consume(TokenType.IDENTIFIER, "Expect identifier in object pattern.");
+          // Pattern bindings: { x } → treat as variable ref
+          Expr value;
+          if (match(COLON)) {
+            value = parsePattern();
+          } else {
+            value = new Expr.Variable(name);
+          }
+          fields.add(new Expr.ObjectLiteral.Pair(name, value));
+        } while (match(TokenType.COMMA));
+      }
+      consume(TokenType.RIGHT_BRACE, "Expect '}' after object pattern.");
+      return new Expr.ObjectLiteral(fields);
+    }
+
+    // Match array pattern: [1, x, _]
+    if (match(TokenType.LEFT_BRACKET)) {
+      List<Expr> elements = new ArrayList<>();
+      if (!check(TokenType.RIGHT_BRACKET)) {
+        do {
+          elements.add(parsePattern());  // Support nested patterns
+        } while (match(TokenType.COMMA));
+      }
+      consume(TokenType.RIGHT_BRACKET, "Expect ']' after list pattern.");
+      return new Expr.ListLiteral(elements);
+    }
+
+    // Fallback to variable or literal
+    return assignment();  // handles numbers, strings, identifiers
+  }
+
 
   private Expr newObject() {
     Token klass = consume(IDENTIFIER, "Expect class name");
@@ -642,6 +823,18 @@ class Parser {
     consume(RIGHT_BRACKET, "Expect ']' after array size.");
 
     return new Expr.NewTypedArray(type, sizeExpr);
+  }
+
+  private Expr nullCoalesce() {
+    Expr expr = assignment();
+
+    while (match(QUESTION_QUESTION)) {
+      Token operator = previous();
+      Expr right = assignment();
+      expr = new Expr.NullCoalesce(expr, operator, right);
+    }
+
+    return expr;
   }
 
   private Expr listComprehension() {
@@ -728,17 +921,37 @@ class Parser {
         consume(LEFT_PAREN, "Expect '(' after property name.");
 
         List<Token> parameters = new ArrayList<>();
+        List<Token> paramTypes = new ArrayList<>();
+        List<Expr> defaultValues = new ArrayList<>();
         if (!check(RIGHT_PAREN)) {
           do {
             parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+
+            if (match(COLON)) {
+              Token type = consume(IDENTIFIER, "Expect type name.");
+              paramTypes.add(type);
+            } else {
+              paramTypes.add(null);
+            }
+
+            if (match(EQUAL)) {
+              defaultValues.add(expression());
+            } else {
+              defaultValues.add(null);
+            }
           } while (match(COMMA));
         }
         consume(RIGHT_PAREN, "Expect ')' after parameters.");
 
+        Token returnType = null;
+        if (match(COLON)) {
+          returnType = consume(IDENTIFIER, "Expect return type.");
+        }
+
         consume(LEFT_BRACE, "Expect '{' before accessor body.");
         List<Stmt> body = block();
 
-        Expr.Function function = new Expr.Function(parameters, body);
+        Expr.Function function = new Expr.Function(null, parameters, paramTypes, returnType, body);
         properties.add(new Expr.ObjectLiteral.Accessor(accessorType, name, function));
       } else {
         throw error(peek(), "Expect property name.");

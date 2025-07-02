@@ -7,6 +7,7 @@ abstract class Stmt {
     R visitBlockStmt(Block stmt);
     R visitCaseStmt(Case stmt);
     R visitClassStmt(Class stmt);
+    R visitDestructuringVarStmt(DestructuringVarStmt stmt);
     R visitExpressionStmt(Expression stmt);
     R visitFunctionStmt(Function stmt);
     R visitIfStmt(If stmt);
@@ -71,6 +72,29 @@ abstract class Stmt {
     final List<Stmt.Function> methods;
   }
 
+ static class DestructuringVarStmt extends Stmt {
+    DestructuringVarStmt(List<DestructuringField> fields, Expr initializer) {
+      this.fields = fields;
+      this.initializer = initializer;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitDestructuringVarStmt(this); }
+
+    static class DestructuringField {
+      final Token name;
+      final Expr defaultValue;
+
+      DestructuringField(Token name, Expr defaultValue) {
+        this.name = name;
+        this.defaultValue = defaultValue;
+      }
+    }
+
+    final List<DestructuringField> fields;
+    final Expr initializer;
+  }
+
   static class Expression extends Stmt {
     Expression(Expr expression) { this.expression = expression;}
 
@@ -81,9 +105,13 @@ abstract class Stmt {
   }
 
   static class Function extends Stmt {
-    Function(Token name, List<Token> params, List<Stmt> body) {
+    Function(Token name, List<Expr> decorators, List<Token> params, List<Token> paramTypes,
+        Token returnType, List<Stmt> body) {
       this.name = name;
+      this.decorators = decorators;
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = false;
       this.hasVarKwargs = false;
@@ -91,11 +119,15 @@ abstract class Stmt {
       this.kwArgsName = null;
     }
 
-    Function(Token name, List<Token> params, List<Stmt> body,
-             boolean hasVarArgs, boolean hasVarKwargs,
-             Token varArgsName, Token kwArgsName) {
+    Function(Token name, List<Expr> decorators, List<Token> params, List<Token> paramTypes,
+        Token returnType, List<Stmt> body,
+        boolean hasVarArgs, boolean hasVarKwargs,
+        Token varArgsName, Token kwArgsName) {
       this.name = name;
+      this.decorators = decorators;
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = hasVarArgs;
       this.hasVarKwargs = hasVarKwargs;
@@ -107,7 +139,10 @@ abstract class Stmt {
     <R> R accept(Visitor<R> visitor) { return visitor.visitFunctionStmt(this); }
 
     final Token name;
+    final List<Expr> decorators;
     final List<Token> params;
+    final List<Token> paramTypes;
+    final Token returnType;
     final List<Stmt> body;
     final boolean hasVarArgs;
     final boolean hasVarKwargs;

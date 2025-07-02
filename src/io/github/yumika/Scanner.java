@@ -26,6 +26,7 @@ class Scanner {
     keywords.put("import", IMPORT);
     keywords.put("in", IN);
     keywords.put("or", OR);
+    keywords.put("match", MATCH);
     keywords.put("new", NEW);
     keywords.put("not", NOT);
     keywords.put("null", NULL);
@@ -66,6 +67,7 @@ class Scanner {
   private void scanToken() {
     char c = advance();
     switch (c) {
+      case '@': addToken(AT); break;
       case '[': addToken(LEFT_BRACKET); break;
       case ']': addToken(RIGHT_BRACKET); break;
       case '(': addToken(LEFT_PAREN); break;
@@ -80,6 +82,7 @@ class Scanner {
           addToken(DOT);
         }
         break;
+      case '%': addToken(PERCENT); break;
       case '|': addToken(PIPE); break;
       case ':': addToken(COLON); break;
       case ';': addToken(SEMICOLON); break;
@@ -123,6 +126,15 @@ class Scanner {
         }
         break;
       // < slash
+      case '?':
+        if (match('.')) {
+          addToken(QUESTION_DOT);
+        } else if (match('?')) {
+          addToken(QUESTION_QUESTION);
+        } else {
+          addToken(QUESTION);
+        }
+        break;
       // whitespace
 
       case ' ':

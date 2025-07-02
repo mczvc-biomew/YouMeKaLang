@@ -20,8 +20,11 @@ abstract class Expr {
     R visitListLiteralExpr(ListLiteral expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
+    R visitMatchExpr(Match expr);
     R visitNewTypedArrayExpr(NewTypedArray expr);
+    R visitNullCoalesceExpr(NullCoalesce expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
+    R visitOptionalGetExpr(OptionalGet expr);
     R visitPostfixExpr(Postfix expr);
     R visitPrefixExpr(Prefix expr);
     R visitSetExpr(Set expr);
@@ -184,8 +187,11 @@ abstract class Expr {
   }
 
   static class Function extends Expr {
-    Function(List<Token> params, List<Stmt> body) {
+    Function(List<Expr> decorators, List<Token> params, List<Token> paramTypes, Token returnType, List<Stmt> body) {
+      this.decorators = decorators;
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = false;
       this.hasVarKwargs = false;
@@ -193,10 +199,14 @@ abstract class Expr {
       this.kwArgsName = null;
     }
 
-    Function(List<Token> params, List<Stmt> body,
-             boolean hasVarArgs, boolean hasVarKwargs,
-             Token varArgsName, Token kwArgsName) {
+    Function(List<Expr> decorators, List<Token> params, List<Token> paramTypes,
+        Token returnType, List<Stmt> body,
+        boolean hasVarArgs, boolean hasVarKwargs,
+        Token varArgsName, Token kwArgsName) {
+      this.decorators = decorators;
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
       this.hasVarArgs = hasVarArgs;
       this.hasVarKwargs = hasVarKwargs;
@@ -207,7 +217,10 @@ abstract class Expr {
     @Override
     <R> R accept(Visitor<R> visitor) { return visitor.visitFunctionExpr(this); }
 
+    final List<Expr> decorators;
     final List<Token> params;
+    final List<Token> paramTypes;
+    final Token returnType;
     final List<Stmt> body;
     final boolean hasVarArgs;
     final boolean hasVarKwargs;
@@ -238,8 +251,10 @@ abstract class Expr {
   }
 
   static class Lambda extends Expr {
-    Lambda(List<Token> params, Expr body) {
+    Lambda(List<Token> params, List<Token> paramTypes, Token returnType, Expr body) {
       this.params = params;
+      this.paramTypes = paramTypes;
+      this.returnType = returnType;
       this.body = body;
     }
 
@@ -247,6 +262,8 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitLambdaExpr(this); }
 
     final List<Token> params;
+    final List<Token> paramTypes;
+    final Token returnType;
     final Expr body;
   }
 
@@ -291,6 +308,30 @@ abstract class Expr {
     final Expr right;
   }
 
+  static class Match extends Expr {
+    Match(Expr value, List<MatchCase> cases) {
+      this.value = value;
+      this.cases = cases;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitMatchExpr(this); }
+
+    final Expr value;
+    final List<MatchCase> cases;
+  }
+
+  static class MatchCase {
+    MatchCase(Expr pattern, Expr body, boolean isElse) {
+      this.pattern = pattern;
+      this.body = body;
+      this.isElse = isElse;
+    }
+
+    final Expr pattern;
+    final Expr body;
+    final boolean isElse;
+  }
+
   static class NewTypedArray extends Expr {
     NewTypedArray(Token type, Expr size) {
       this.type = type;
@@ -301,6 +342,20 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitNewTypedArrayExpr(this); }
     final Token type;
     final Expr size;
+  }
+
+  static class NullCoalesce extends Expr {
+    NullCoalesce(Expr left, Token operator, Expr right) {
+      this.left = left;
+      this.operator = operator;
+      this.right = right;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitNullCoalesceExpr(this); }
+
+    final Expr left;
+    final Token operator;
+    final Expr right;
   }
 
   static class ObjectLiteral extends Expr {
@@ -343,6 +398,18 @@ abstract class Expr {
       final Token name;
       final Expr.Function function;
     }
+  }
+
+  static class OptionalGet extends Expr {
+    OptionalGet(Expr object, Token name) {
+      this.object = object;
+      this.name = name;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitOptionalGetExpr(this); }
+
+    final Expr object;
+    final Token name;
   }
 
   static class Postfix extends Expr {

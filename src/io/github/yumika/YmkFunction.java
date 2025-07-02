@@ -7,6 +7,8 @@ import java.util.Map;
 public class YmkFunction implements YmkCallable {
   private final String name;
   private final List<Token> params;
+  private final List<Token> paramTypes;
+  private final Token returnType;
   private final List<Stmt> body;
   final boolean hasVarArgs;
   final boolean hasVarKwargs;
@@ -23,6 +25,8 @@ public class YmkFunction implements YmkCallable {
     this.closure = closure;
     this.name = declaration.name.lexeme;
     this.params = declaration.params;
+    this.paramTypes = declaration.paramTypes;
+    this.returnType = declaration.returnType;
     this.body = declaration.body;
     this.hasVarArgs = declaration.hasVarArgs;
     this.hasVarKwargs = declaration.hasVarKwargs;
@@ -33,6 +37,8 @@ public class YmkFunction implements YmkCallable {
   YmkFunction(Expr.Function expression, Environment closure,  boolean isInitializer) {
     this.name = null;
     this.params = expression.params;
+    this.paramTypes = expression.paramTypes;
+    this.returnType = expression.returnType;
     this.body = expression.body;
     this.closure = closure;
     this.isInitializer = isInitializer;
@@ -52,6 +58,8 @@ public class YmkFunction implements YmkCallable {
   private YmkFunction(YmkFunction original, Environment closure) {
     this.name = original.name;
     this.params = original.params;
+    this.paramTypes = original.paramTypes;
+    this.returnType = original.returnType;
     this.body = original.body;
     this.isInitializer = original.isInitializer;
     this.closure = closure;
@@ -76,6 +84,19 @@ public class YmkFunction implements YmkCallable {
     // standard args
     // Normal arguments
     for (int i = 0; i < normalParamCount && i < arguments.size(); i++) {
+      Token param = params.get(i);
+      Token paramType = paramTypes.get(i);
+      Object argValue = arguments.get(i);
+
+      if (paramType != null) {
+        String expected = paramType.lexeme;
+        if (!interpreter.isTypeMatch(argValue, expected)) {
+          throw new RuntimeError(param,
+              "TypeError: Expected argument of type '" + expected + "', got '" +
+              interpreter.getTypeName(argValue) + "'");
+        }
+      }
+
       environment.define(params.get(i).lexeme,
           arguments.get(i));
     }
@@ -116,6 +137,15 @@ public class YmkFunction implements YmkCallable {
     } catch (Return returnValue) {
       // Classes early-return-this
       if (isInitializer) return closure.getAt(0, "this");
+
+      if (returnType != null) {
+        String expected = returnType.lexeme;
+        if (!interpreter.isTypeMatch(returnValue.value, expected)) {
+          throw new RuntimeError(returnType,
+              "TypeError: Expected return of type '" + expected + "', got '" +
+                  interpreter.getTypeName(returnValue.value) + "'");
+        }
+      }
 
       return returnValue.value;
     }

@@ -115,6 +115,23 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitDestructuringVarStmt(Stmt.DestructuringVarStmt stmt){
+    // First resolve the initializer expression
+    resolve(stmt.initializer);
+
+    // Declare each field in destructured patter
+    for (Stmt.DestructuringVarStmt.DestructuringField field : stmt.fields) {
+      declare(field.name);
+      if (field.defaultValue != null) {
+        resolve(field.defaultValue);
+      }
+      define(field.name);
+    }
+
+    return null;
+  }
+
+  @Override
   public Void visitExpressionStmt(Stmt.Expression stmt) {
     resolve(stmt.expression);
     return null;
@@ -356,8 +373,31 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitMatchExpr(Expr.Match expr) {
+    resolve(expr.value);
+    for (Expr.MatchCase kase : expr.cases) {
+      if (!kase.isElse && kase.pattern != null) resolve(kase.pattern);
+      resolve(kase.body);
+    }
+    return null;
+  }
+
+  @Override
   public Void visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
     resolve(expr.size);
+    return null;
+  }
+
+  @Override
+  public Void visitNullCoalesceExpr(Expr.NullCoalesce expr) {
+    resolve(expr.left);
+    resolve(expr.right);
+    return null;
+  }
+
+  @Override
+  public Void visitOptionalGetExpr(Expr.OptionalGet expr) {
+    resolve(expr.object);
     return null;
   }
 
@@ -452,9 +492,21 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     currentFunction = type;
 
     beginScope();
-    for (Token param : function.params) {
+//    for (Token param : function.params) {
+    for (int i = 0; i < function.params.size(); i++) {
+      Token param = function.params.get(i);
       declare(param);
       define(param);
+
+      if (function.paramTypes.get(i) != null) {
+        Token typeToken = function.paramTypes.get(i);
+        String expected = typeToken.lexeme;
+      }
+
+    }
+
+    if (function.returnType != null) {
+      Token returnType = function.returnType;
     }
     resolve(function.body);
     endScope();
