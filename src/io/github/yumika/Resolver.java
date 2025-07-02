@@ -373,6 +373,16 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitMatchExpr(Expr.Match expr) {
+    resolve(expr.value);
+    for (Expr.MatchCase kase : expr.cases) {
+      if (!kase.isElse && kase.pattern != null) resolve(kase.pattern);
+      resolve(kase.body);
+    }
+    return null;
+  }
+
+  @Override
   public Void visitNewTypedArrayExpr(Expr.NewTypedArray expr) {
     resolve(expr.size);
     return null;
