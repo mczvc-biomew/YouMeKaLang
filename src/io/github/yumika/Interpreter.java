@@ -260,6 +260,23 @@ public class Interpreter implements
       }
     }
 
+    for (Token interfaceName : stmt.interfaces) {
+      Object interfaceObj = environment.get(interfaceName);
+      if (!(interfaceObj instanceof Stmt.Interface iface)) {
+        throw new RuntimeError(interfaceName,
+            "Unknown interface: " + interfaceName.lexeme);
+      }
+
+      for (Stmt.Function method : iface.methods) {
+        if (!stmt.methods.containsKey(method.name.lexeme)) {
+          throw new RuntimeError(stmt.name,
+              "Class '" + stmt.name.lexeme + "' does not implement method '"
+                  + method.name.lexeme + "' from interface '" + interfaceName.lexeme + "'");
+        }
+      }
+    }
+
+
     // Inheritance interpret-superclass
     environment.define(stmt.name.lexeme, null);
 
@@ -271,12 +288,12 @@ public class Interpreter implements
 
     // interpret-methods
     Map<String, YmkFunction> methods = new HashMap<>();
-    for (Stmt.Function method : stmt.methods) {
+    for (Map.Entry<String, Stmt.Function> method : stmt.methods.entrySet()) {
       // interpreter-method-initializer
-      YmkFunction function = new YmkFunction(method, environment,
-          method.name.lexeme.equals("init"));
+      YmkFunction function = new YmkFunction(method.getValue(), environment,
+          method.getKey().equals("init"));
 
-      methods.put(method.name.lexeme, function);
+      methods.put(method.getValue().name.lexeme, function);
     }
 
     // Inheritance interpreter-construct-class
@@ -408,6 +425,12 @@ public class Interpreter implements
     moduleEnv.forEach((k, v) -> namespace.set(k, v, this));
     environment.define(aliasName, namespace);
 
+    return null;
+  }
+
+  @Override
+  public Void visitInterfaceStmt(Stmt.Interface stmt) {
+    environment.define(stmt.name.lexeme, stmt);
     return null;
   }
 
