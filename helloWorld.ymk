@@ -108,7 +108,7 @@ fun callCaller() {
 
 callCaller();
 print "fun () { return 42; }";
-print fun () { return 42; };
+print (fun () { return 42; })();
 
 fun memoize(fn) {
     var cache = {};
@@ -126,7 +126,8 @@ fun fib(n) {
     return fib(n - 1) + fib(n - 2);
 }
 
-print fib(100);
+puts "fibonacci(30) is ";
+print fib(30);
 
 print "";
 
