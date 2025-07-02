@@ -661,6 +661,14 @@ public class Interpreter implements
           return (String)left + (String)right;
         }
 
+        if (left instanceof String && right instanceof Double) {
+          return (String)left + right.toString();
+        }
+
+        if (right instanceof String && left instanceof Double) {
+          return left.toString() + (String)right;
+        }
+
         if (expr.left instanceof Expr.Variable && expr.right instanceof Expr.Variable) {
           Object leftVar = evaluate((Expr)expr.left);
           Object rightVar = evaluate((Expr)expr.right);
@@ -895,6 +903,80 @@ public class Interpreter implements
     }
 
     return evaluate(expr.right);
+  }
+
+  @Override
+  public Object visitMatchExpr(Expr.Match expr) {
+    Object target = evaluate(expr.value);
+
+    for (Expr.MatchCase kase : expr.cases) {
+      Environment matchEnv = new Environment(environment);
+      if (kase.isElse || matchPattern(target, kase.pattern, matchEnv)) {
+        resolveLogical(kase.body, 0);
+        return evaluateWithEnv(kase.body, matchEnv);
+      }
+    }
+
+    return null;
+  }
+
+  private boolean matchPattern(Object target, Expr pattern, Environment matchEnv) {
+
+    if (pattern instanceof Expr.Literal lit) {
+      return Objects.equals(target, lit.value);
+    }
+
+    if (pattern instanceof Expr.Variable var) {
+      matchEnv.define(var.name.lexeme, target);
+      return true;
+    }
+
+    if (pattern instanceof Expr.ListLiteral listPattern) {
+      if (!(target instanceof List<?> targetList)) return false;
+      if (listPattern.elements.size() != targetList.size()) return false;
+
+      for (int i = 0; i < listPattern.elements.size(); i++) {
+        if (!matchPattern(targetList.get(i), listPattern.elements.get(i), matchEnv)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    if (pattern instanceof Expr.ObjectLiteral objPattern) {
+      if (!(target instanceof Map<?, ?> targetMap) && !(target instanceof YmkInstance)) return false;
+
+      for (Expr.ObjectLiteral.Property prop : objPattern.properties) {
+        if (prop instanceof Expr.ObjectLiteral.Pair pair) {
+          String key = pair.key.lexeme;
+          Object value = null;
+
+          if (target instanceof Map<?, ?> map) {
+            if (!map.containsKey(key)) return false;
+            value = map.get(key);
+          } else if (target instanceof YmkInstance inst) {
+            try {
+              value = inst.get(new Token(TokenType.IDENTIFIER, key, null, 0), this);
+            } catch (RuntimeError e) {
+              return false;
+            }
+          }
+
+          if (!matchPattern(value, pair.value, matchEnv)) return false;
+        }
+      }
+
+      return true;
+    }
+
+    Object patt = evaluate(pattern);
+
+    if (patt instanceof YmkInstance pi && target instanceof YmkInstance ti) {
+      return pi.equals(ti);
+    }
+
+    return Objects.equals(target, patt);
   }
 
   @Override
