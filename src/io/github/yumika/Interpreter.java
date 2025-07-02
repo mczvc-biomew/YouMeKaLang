@@ -882,6 +882,16 @@ public class Interpreter implements
   public Object visitGroupingExpr(Expr.Grouping expr) { return evaluate(expr.expression); }
 
   @Override
+  public Object visitInterpolatedStringExpr(Expr.InterpolatedString expr) {
+    StringBuilder builder = new StringBuilder();
+    for (Expr part : expr.parts) {
+      Object value = evaluate(part);
+      builder.append(value != null ? value.toString() : "null");
+    }
+    return builder.toString();
+  }
+
+  @Override
   public Object visitLambdaExpr(Expr.Lambda expr) {
     Object thisContext = null;
     if (environment.contains("this")) {
