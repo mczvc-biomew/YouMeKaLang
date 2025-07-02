@@ -6,13 +6,11 @@ try {
   print "Caught error: " + e;
 }
 
-import java.util;
 
 var list = java.util.ArrayList();
 list.add("Hello Matt");
 puts list.get(0) + " ";
 
-import java.lang.Math;
 print Math.pow(15, 1) * 2;
 
 puts "Full name:\n";
