@@ -120,6 +120,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitTypeDefStmt(Stmt.TypeDef stmt) {
+    return parenthesize2("type definition", stmt.name, stmt.definition);
+  }
+
+  @Override
   public String visitVarStmt(Stmt.Var stmt) {
     if (stmt.initializer == null) {
       return parenthesize2("var", stmt.name);
