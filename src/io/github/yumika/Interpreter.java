@@ -437,6 +437,7 @@ public class Interpreter implements
 
   @Override
   public Void visitPutsStmt(Stmt.Puts stmt) {
+    resolve(stmt.expression, 0);
     Object value = evaluate(stmt.expression);
     System.out.print(stringify(value));
     return null;
@@ -469,14 +470,48 @@ public class Interpreter implements
   }
 
   @Override
+  public Void visitTypeDefStmt(Stmt.TypeDef stmt) {
+    environment.define(stmt.name.lexeme, stmt.definition);
+    return null;
+  }
+
+  @Override
   public Void visitVarStmt(Stmt.Var stmt) {
     Object value = null;
     if (stmt.initializer != null) {
       value = evaluate(stmt.initializer);
+
+      if (stmt.type != null) {
+        Object typeDef = environment.get(stmt.type.lexeme);
+        if (!isTypeMatchAgainstDef(value, typeDef)) {
+          throw new RuntimeError(stmt.name, "Type error: expected '" + stmt.type.lexeme + "'");
+        }
+      }
+
+      environment.define(stmt.name.lexeme, value);
+    }
+    return null;
+  }
+
+  protected boolean isTypeMatchAgainstDef(Object value, Object typeDef) {
+    if (typeDef instanceof Expr.ObjectLiteral defStruct) {
+      if (!(value instanceof Map<?, ?> || value instanceof YmkInstance)) return false;
+
+      for (Expr.ObjectLiteral.Property prop : defStruct.properties) {
+        if (prop instanceof Expr.ObjectLiteral.Pair pair) {
+          String key = pair.key.lexeme;
+          if (value instanceof Map<?, ?> valMap) {
+            if (!valMap.containsKey(key)) return false;
+          } else if (value instanceof YmkInstance inst) {
+            if (!inst.getFields().containsKey(key)) return false;
+          }
+          // Optional: resolve expected type via prop.value and check `typeof(value.get(key))`
+        }
+      }
+      return true;
     }
 
-    environment.define(stmt.name.lexeme, value);
-    return null;
+    return true; // fallback: not enforced
   }
 
   @Override
@@ -1356,7 +1391,7 @@ public class Interpreter implements
     return sb.toString();
   }
 
-  private String stringify(Object object) {
+  protected String stringify(Object object) {
     if (object == null) return "null";
 
     if (object instanceof Double) {
@@ -1368,6 +1403,28 @@ public class Interpreter implements
       return text;
     } else if (object instanceof List<?> list) {
       return stringify(list);
+    } else if (object instanceof Expr.ObjectLiteral objLiteral) {
+      StringBuilder pairBuilder = new StringBuilder();
+      pairBuilder.append("\n{");
+      for (Expr.ObjectLiteral.Property prop : objLiteral.properties) {
+        if (prop instanceof Expr.ObjectLiteral.Pair pair) {
+          pairBuilder.append("\n\t").append(stringify(pair.key.lexeme)).append(" -> ");
+          if (pair.value instanceof Expr.Variable var) {
+            pairBuilder.append(stringify(var.name.lexeme)).append(";");
+          }
+        }
+      }
+      pairBuilder.append("\n}\n");
+      return pairBuilder.toString();
+    } else if (object instanceof YmkInstance inst) {
+      StringBuilder pairBuilder = new StringBuilder();
+      pairBuilder.append("\n{");
+      for ( Map.Entry<?, ?> entry : inst.getFields().entrySet() ) {
+        pairBuilder.append("\n\t").append(stringify(entry.getKey())).append(" -> ");
+        pairBuilder.append(stringify(entry.getValue())).append(",");
+      }
+      pairBuilder.append("\n}\n");
+      return pairBuilder.toString();
     }
 
     return object.toString();
