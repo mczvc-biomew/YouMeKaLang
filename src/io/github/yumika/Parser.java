@@ -32,7 +32,7 @@ class Parser {
     try {
       if (match(CLASS)) return classDeclaration();
 
-      if (match(FUN)) return functionStatement("function");
+      if (check(AT) || match(FUN)) return functionStatement("function");
 
       if (match(VAR)) return varDeclaration();
 
@@ -298,8 +298,21 @@ class Parser {
   }
 
   private Stmt.Function functionStatement(String kind) {
+    List<Expr> decorators = new ArrayList<>();
+    boolean decorated = false;
+
+    while (match(AT)) {
+      decorators.add(expression());
+      decorated = true;
+    }
+
+    if (decorated && !match(FUN)) {
+      error(peek(), "Expect 'fun'.");
+    }
+
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
     consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+
     List<Token> parameters = new ArrayList<>();
     List<Token> paramTypes = new ArrayList<>();
     List<Expr> defaultValues = new ArrayList<>();
@@ -353,7 +366,7 @@ class Parser {
 
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, parameters, paramTypes, returnType, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
+    return new Stmt.Function(name, decorators, parameters, paramTypes, returnType, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
   }
 
   private List<Stmt> block() {
@@ -425,12 +438,24 @@ class Parser {
   }
 
   private Expr and() {
-    Expr expr = equality();
+    Expr expr = inclusion();
 
     while (match(AND)) {
       Token operator = previous();
-      Expr right = equality();
+      Expr right = inclusion();
       expr = new Expr.Logical(expr, operator, right);
+    }
+
+    return expr;
+  }
+
+  private Expr inclusion() {
+    Expr expr = equality();
+
+    while (match(IN)) {
+      Token operator = previous();
+      Expr right = equality();
+      expr = new Expr.Binary(expr, operator, right);
     }
 
     return expr;
@@ -632,6 +657,11 @@ class Parser {
   }
 
   private Expr functionExpression(String kind) {
+    List<Expr> decorators = new ArrayList<>();
+
+    while (match(AT)) {
+      decorators.add(expression());
+    }
     consume(LEFT_PAREN, "Expect '(' after '" + kind + "'.");
     List<Token> parameters = new ArrayList<>();
     List<Token> paramTypes = new ArrayList<>();
@@ -665,7 +695,7 @@ class Parser {
 
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Expr.Function(parameters, paramTypes, returnType, body);
+    return new Expr.Function(decorators, parameters, paramTypes, returnType, body);
 
   }
 
@@ -921,7 +951,7 @@ class Parser {
         consume(LEFT_BRACE, "Expect '{' before accessor body.");
         List<Stmt> body = block();
 
-        Expr.Function function = new Expr.Function(parameters, paramTypes, returnType, body);
+        Expr.Function function = new Expr.Function(null, parameters, paramTypes, returnType, body);
         properties.add(new Expr.ObjectLiteral.Accessor(accessorType, name, function));
       } else {
         throw error(peek(), "Expect property name.");
