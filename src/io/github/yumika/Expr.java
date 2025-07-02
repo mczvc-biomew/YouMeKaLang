@@ -20,6 +20,7 @@ abstract class Expr {
     R visitListLiteralExpr(ListLiteral expr);
     R visitLiteralExpr(Literal expr);
     R visitLogicalExpr(Logical expr);
+    R visitMatchExpr(Match expr);
     R visitNewTypedArrayExpr(NewTypedArray expr);
     R visitNullCoalesceExpr(NullCoalesce expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
@@ -302,6 +303,30 @@ abstract class Expr {
     final Expr left;
     final Token operator;
     final Expr right;
+  }
+
+  static class Match extends Expr {
+    Match(Expr value, List<MatchCase> cases) {
+      this.value = value;
+      this.cases = cases;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitMatchExpr(this); }
+
+    final Expr value;
+    final List<MatchCase> cases;
+  }
+
+  static class MatchCase {
+    MatchCase(Expr pattern, Expr body, boolean isElse) {
+      this.pattern = pattern;
+      this.body = body;
+      this.isElse = isElse;
+    }
+
+    final Expr pattern;
+    final Expr body;
+    final boolean isElse;
   }
 
   static class NewTypedArray extends Expr {
