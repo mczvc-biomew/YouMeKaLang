@@ -15,26 +15,55 @@ puts list.get(0) + " ";
 import java.lang.Math;
 print Math.pow(15, 1) * 2;
 
-puts "Full name: ";
+puts "Full name:\n";
 var {name, middle = "Corrales", last} = { name: "Luqas Matt", last: "Noces" };
-print `${name} ${middle} ${last}`;
+
+type RobloxPlayer = {
+    name: string,
+    age: number
+};
+
+type RagnarokPlayer = {
+    name: string,
+    level: number
+};
+
+var luqas: RobloxPlayer = {
+    name: `${name} ${middle} ${last}`,
+    age: 8
+};
+
+fun greetRP(u: RobloxUser) {
+    print `Hello ${u.name}!` + '\n' + `You are now ${u.age} years old`;
+}
+
+fun greetMU(u: RagnarokPlayer) {
+    print `Hello luqas-matt`;
+}
+
+greetRP(luqas);
+try {
+    greetMU(luqas);
+} catch (e) {
+    print "Not a Ragnarok user!";
+    print e;
+}
+
 print "";
 
 import modules.helloWorld as hw;
 
 print "Start";
-setTimeout(|| { print "Hi after 1s"; }, 1000);
-var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
+//setTimeout(|| { print "Hi after 1s"; }, 1000);
+//var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
 
-setTimeout(|| clearTimeout(id), 2000);
+//setTimeout(|| clearTimeout(id), 2000);
 
 print "H-i and H-e-l-l-o";
-hw.hello();
-print hw.hello();
 print hw.hello()["world"];
 print "Does capture local variable";
 var greetings = hw.hello()["greetings"];
-print "Hi!";
+print " -- Hi!";
 puts `${greetings} says: `;
 // print env();
 print greetings();
@@ -43,7 +72,8 @@ print "";
 
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
-print `hw.hello is: ${typeof(hw.hello)} that returns ${typeof(hw.hello())}`;
+print `: (hw.hello) is: ${typeof(hw.hello)} that returns ${typeof(hw.hello())}`;
+print hw.hello();
 print "";
 
 
@@ -51,7 +81,7 @@ var obj = {name: "YouMeKa", version: 1.0};
 if ("name" in obj) print obj.name;
 
 var nums = [1, 2, 3];
-if (2 in nums) print "2 is in list";
+if (2 in nums) print `2 is in list: ${nums}`;
 
 if ("Me" in "YouMeKa") print "Me found in 'YouMeKa'";
 print "";
@@ -265,11 +295,11 @@ print "";
 
 print "# Pattern matching";
 var value = [1, 2];
-var value2 = {type: "Point", x: 3, y: 4};
+var value2 = {_type: "Point", x: 3, y: 4};
 
 var result = match value {
   when [1, x] => "head 1, tail " + x;
-  when {type: "Point", x, y} => x + y + 1;
+  when {_type: "Point", x, y} => x + y + 1;
   when 42 => "The Answer";
   else => "Unknown";
 };

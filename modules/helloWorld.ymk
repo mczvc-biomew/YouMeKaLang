@@ -1,6 +1,7 @@
 fun hello() {
     var hi = "Hello";
     var welcome = "welcome";
+    puts hi;
     return {
         world: " World!",
         greetings: || hi + this.world,
