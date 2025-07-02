@@ -67,6 +67,7 @@ class Scanner {
   private void scanToken() {
     char c = advance();
     switch (c) {
+      case '@': addToken(AT); break;
       case '[': addToken(LEFT_BRACKET); break;
       case ']': addToken(RIGHT_BRACKET); break;
       case '(': addToken(LEFT_PAREN); break;
