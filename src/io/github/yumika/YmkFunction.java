@@ -1,15 +1,16 @@
 package io.github.yumika;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class YmkFunction implements YmkCallable {
-  private final String name;
-  private final List<Token> params;
-  private final List<Token> paramTypes;
-  private final Token returnType;
-  private final List<Stmt> body;
+  final String name;
+  final List<Token> params;
+  final List<Token> paramTypes;
+  final Token returnType;
+  final List<Stmt> body;
   final boolean hasVarArgs;
   final boolean hasVarKwargs;
   final Token varArgsName;
@@ -73,43 +74,55 @@ public class YmkFunction implements YmkCallable {
   public String toString() { return "<fn " + this.name + ">"; }
 
   @Override
-  public int arity() { return params.size(); }
+  public int arity() { return (hasVarArgs || hasVarKwargs) ? -1 : params.size(); }
 
   // function-call
   @Override
   public Object call(Interpreter interpreter,
-                     List<Object> arguments) {
+                     List<Object> arguments,
+                     Map<String, Object> kwargs) {
     Environment closure = new Environment(this.closure);
-    int normalParamCount = params.size();
+    int expectedParamsCount = params.size();
+    int given = arguments.size();
+    int varStart = expectedParamsCount;
+
+    List<Object> varArgs = new ArrayList<>();
+    Map<String, Object> kwArgs = new HashMap<>();
     // standard args
     // Normal arguments
-    for (int i = 0; i < normalParamCount && i < arguments.size(); i++) {
+    for (int i = 0; i < expectedParamsCount; i++) {
       Token param = params.get(i);
-      Token paramType = paramTypes.get(i);
+      Token paramType = null;
       Object argValue = arguments.get(i);
+
+      if (i < paramTypes.size()) {
+        paramType = paramTypes.get(i);
+      }
+
+      closure.define(param.lexeme, arguments.get(i));
 
       if (paramType != null) {
         try {
           Object expectedType = closure.get(paramType.lexeme);
+          // User defined type check
           if (!interpreter.isTypeMatchAgainstDef(argValue, expectedType)) {
             throw new RuntimeError(param,
-                "TypeError: Expected argument of type '"
+                "TypeError: Expected argument of user defined type '"
                     + paramType.lexeme + interpreter.stringify(expectedType) + "', got: " +
                     interpreter.stringify(argValue));
           }
         } catch (RuntimeError.UndefinedException error) {
-          String expected = paramType.lexeme;
-          if (!interpreter.isTypeMatch(argValue, expected)) {
+          String expectedType = paramType.lexeme;
+          // primitive type check
+          if (!interpreter.isTypeMatch(argValue, expectedType)) {
             throw new RuntimeError(param,
-                "TypeError: Expected argument of type '" + expected + "', got '" +
+                "TypeError: Expected argument of type '" + expectedType + "', got '" +
                     interpreter.getTypeName(argValue) + "'");
 
           }
         }
       }
 
-      closure.define(params.get(i).lexeme,
-          arguments.get(i));
     }
 
     if (hasVarArgs && varArgsName == null) {
@@ -121,24 +134,21 @@ public class YmkFunction implements YmkCallable {
           "Must have kwargs name.");
     }
 
-    // *args
+//  *args
     if (hasVarArgs) {
-      List<Object> varArgs = new ArrayList<>();
-      for (int i = normalParamCount; i < arguments.size(); i++) {
+      for (int i = varStart; i < given; i++) {
         varArgs.add(arguments.get(i));
       }
 
       closure.define(varArgsName.lexeme, varArgs);
     }
 
-    // **kwargs (last arg is expected to be Map<String, Object>)
+//  **kwargs
     if (hasVarKwargs) {
-      Object lastArg = arguments.get(arguments.size() - 1);
-      if (!(lastArg instanceof Map)) {
-        throw new RuntimeError(varArgsName,
-            "**kwargs must be passed as map.");
+      for (Map.Entry<String, Object> kwarg : kwargs.entrySet()) {
+        kwArgs.put(kwarg.getKey(), kwarg.getValue());
       }
-      closure.define(kwArgsName.lexeme, lastArg);
+      closure.define(kwArgsName.lexeme, kwArgs);
     }
 
     try {
@@ -146,7 +156,7 @@ public class YmkFunction implements YmkCallable {
 
     // catch-return
     } catch (Return returnValue) {
-      // Classes early-return-this
+      // Class creation return 'this'
       if (isInitializer) return this.closure.getAt(0, "this");
 
       if (returnType != null) {
