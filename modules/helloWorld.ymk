@@ -11,12 +11,17 @@ fun hello() {
 }
 
 interface Greeter {
-    greet(msg: string);
+    greet(msg: string, *args, **kwargs);
 }
 
 class ConcreteGreeter > Greeter {}
 class CompleteGreeter > Greeter {
-    greet(msg: string) {
+    greet(msg: string, *args, **kwargs) {
         print msg;
+        print args;
+        print kwargs;
     }
 }
+
+var cg = CompleteGreeter();
+cg.greet("Hello World [test]", "test1", "test2", test123: "test");

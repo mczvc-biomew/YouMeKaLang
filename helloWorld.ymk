@@ -32,7 +32,7 @@ var luqas: RobloxPlayer = {
 };
 
 fun greetRP(u: RobloxUser) {
-    print `Hello ${u.name}!` + '\n' + `You are now ${u.age} years old`;
+    print `Hello, ${u.name}!` + '\n' + `You are now ${u.age} years old`;
 }
 
 fun greetMU(u: RagnarokPlayer) {
@@ -44,6 +44,7 @@ try {
     greetMU(luqas);
 } catch (e) {
     print "Not a Ragnarok user!";
+    print "But a Minecraft and Roblox player ;)";
     print e;
 }
 
@@ -52,10 +53,10 @@ print "";
 import modules.helloWorld as hw;
 
 print "Start";
-//setTimeout(|| { print "Hi after 1s"; }, 1000);
-//var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
+setTimeout(|| { print "Hi after 1s"; }, 1000);
+var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
 
-//setTimeout(|| clearTimeout(id), 2000);
+setTimeout(|| clearTimeout(id), 2000);
 
 print "H-i and H-e-l-l-o";
 print hw.hello()["world"];
