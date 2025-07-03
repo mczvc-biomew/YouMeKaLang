@@ -89,11 +89,12 @@ class Environment {
 
   @Override
   public String toString() {
-    String result = values.toString();
+    StringBuilder result = new StringBuilder( Interpreter.stringify(values, 1) );
+    result.append("\n");
     if (enclosing != null) {
-      result += " -> " + enclosing.toString();
+      result.append(" -> ").append(Interpreter.stringify(0, enclosing));
     }
 
-    return result;
+    return "Environment: " + result.toString() + "::\n";
   }
 }
