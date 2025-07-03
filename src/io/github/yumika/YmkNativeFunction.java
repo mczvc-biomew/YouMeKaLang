@@ -1,6 +1,7 @@
 package io.github.yumika;
 
 import java.util.List;
+import java.util.Map;
 
 // Define NativeFunction adapter that wraps a lambda as a YmkFunction
 public class YmkNativeFunction implements YmkCallable {
@@ -25,7 +26,9 @@ public class YmkNativeFunction implements YmkCallable {
   }
 
   @Override
-  public Object call(Interpreter interpreter, List<Object> arguments) {
+  public Object call(Interpreter interpreter,
+                     List<Object> arguments,
+                     Map<String, Object> kwargs) {
     return impl.call(interpreter, arguments);
   }
 

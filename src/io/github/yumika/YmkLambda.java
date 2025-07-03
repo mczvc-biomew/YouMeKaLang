@@ -1,6 +1,7 @@
 package io.github.yumika;
 
 import java.util.List;
+import java.util.Map;
 
 class YmkLambda implements YmkCallable {
   private final Expr.Lambda declaration;
@@ -23,7 +24,8 @@ class YmkLambda implements YmkCallable {
   }
 
   @Override
-  public Object call(Interpreter interpreter, List<Object> arguments) {
+  public Object call(Interpreter interpreter, List<Object> arguments,
+                     Map<String, Object> kwargs) {
     Environment environment = new Environment(closure);
     for (int i = 0; i < declaration.params.size(); i++) {
       Token param = declaration.params.get(i);
