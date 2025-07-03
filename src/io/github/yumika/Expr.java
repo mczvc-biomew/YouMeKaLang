@@ -1,6 +1,7 @@
 package io.github.yumika;
 
 import java.util.List;
+import java.util.Map;
 
 abstract class Expr {
   interface Visitor<R> {
@@ -133,10 +134,12 @@ abstract class Expr {
   }
 
   static class Call extends Expr {
-    Call(Expr callee, Token paren, List<Expr> arguments) {
+    Call(Expr callee, Token paren, List<Expr> positionalArgs,
+         Map<String, Expr> keywordArgs) {
       this.callee = callee;
       this.paren = paren;
-      this.arguments = arguments;
+      this.positionalArgs = positionalArgs;
+      this.keywordArgs = keywordArgs;
     }
 
     @Override
@@ -144,7 +147,8 @@ abstract class Expr {
 
     final Expr callee;
     final Token paren;
-    final List<Expr> arguments;
+    final List<Expr> positionalArgs;
+    final Map<String, Expr> keywordArgs;
   }
 
   static class Case extends Expr {
