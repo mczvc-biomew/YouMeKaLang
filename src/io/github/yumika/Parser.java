@@ -376,13 +376,13 @@ class Parser {
         }
 
         if (match(STAR_STAR)) {
-          hasVarArgs = true;
+          hasVarKwargs = true;
           kwArgsName = consume(IDENTIFIER, "Expect name for keyword arguments.");
-          parameters.add(kwArgsName);
+//          parameters.add(kwArgsName);
         } else if (match(STAR)) {
             hasVarArgs = true;
             varArgsName = consume(IDENTIFIER, "Expect name for variable arguments.");
-            parameters.add(varArgsName);
+//            parameters.add(varArgsName);
         } else {
           parameters.add(
               consume(IDENTIFIER, "Expect parameter name."));
@@ -411,7 +411,11 @@ class Parser {
 
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, decorators, parameters, paramTypes, returnType, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
+    return new Stmt.Function(name, decorators,
+        parameters, paramTypes,
+        returnType, body,
+        hasVarArgs, hasVarKwargs,
+        varArgsName, kwArgsName );
   }
 
   private List<Stmt> block() {
@@ -574,19 +578,27 @@ class Parser {
 
   private Expr finishCall(Expr callee) {
     List<Expr> arguments = new ArrayList<>();
+    Map<String, Expr> keywordArgs = new HashMap<>();
 
     if (!check(RIGHT_PAREN)) {
       do {
         if (arguments.size() >= 255) {
           error(peek(), "Maximum of 255 arguments.");
         }
-        arguments.add(expression());
+        if (check(IDENTIFIER) && peekNext().type == COLON) {
+          Token key = consume(IDENTIFIER, "Expect keyword argument.");
+          consume(COLON, "Expect ':' after keyword name.");
+          Expr value = expression();
+          keywordArgs.put(key.lexeme, value);
+        } else {
+          arguments.add(expression());
+        }
       } while (match(COMMA));
     }
 
     Token paren = consume(RIGHT_PAREN,
         "Expect ')' after arguments.");
-    return new Expr.Call(callee, paren, arguments);
+    return new Expr.Call(callee, paren, arguments, keywordArgs);
   }
 
   private Expr call() {
@@ -1120,6 +1132,11 @@ class Parser {
   private boolean isAtEnd() { return peek().type == EOF; }
 
   private Token peek() { return tokens.get(current); }
+
+  private Token peekNext() {
+    if (current + 1 >= tokens.size()) return tokens.get(tokens.size() - 1); // EOF
+    return tokens.get(current + 1);
+  }
 
   private Token previous() { return tokens.get(current - 1); }
 
