@@ -59,7 +59,7 @@ public class Interpreter implements
     runningTimers.incrementAndGet();
     ScheduledFuture<?> future = scheduler.schedule(() -> {
       try {
-        fn.call(this, List.of());
+        fn.call(this, List.of(), Map.of());
       } catch (Exception e) {
         e.printStackTrace();
       } finally {
@@ -78,7 +78,7 @@ public class Interpreter implements
     ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
       try {
         List<Object> args = fn.arity() >= 1 ? List.of((double) counter[0]++) : List.of();
-        fn.call(this, args);
+        fn.call(this, args,  Map.of());
       } catch (Exception e) {
         e.printStackTrace();
       } finally {
@@ -119,7 +119,9 @@ public class Interpreter implements
   private Object evaluate(Expr expr) { return expr.accept(this); }
 
   // Statements and State execute
-  private void execute(Stmt stmt) { stmt.accept(this); }
+  private void execute(Stmt stmt) {
+    stmt.accept(this);
+  }
 
   // Resolving and Binding resolve
   void resolve(Expr expr, int depth) { locals.put(expr, depth); }
@@ -194,7 +196,7 @@ public class Interpreter implements
       }
 
       @Override
-      public Object call(Interpreter interpreter, List<Object> args) {
+      public Object call(Interpreter interpreter, List<Object> args, Map<String, Object> kwargs) {
         return cls.isInstance(args.get(0));
       }
 
@@ -213,7 +215,8 @@ public class Interpreter implements
       }
 
       @Override
-      public Object call(Interpreter interpreter, List<Object> args) {
+      public Object call(Interpreter interpreter, List<Object> args,
+                         Map<String, Object> kwargs) {
         return args.get(0) instanceof YmkCallable || args.get(0) instanceof YmkFunction;
       }
 
@@ -286,10 +289,8 @@ public class Interpreter implements
       environment.define("super", superclass);
     }
 
-    // interpret-methods
     Map<String, YmkFunction> methods = new HashMap<>();
     for (Map.Entry<String, Stmt.Function> method : stmt.methods.entrySet()) {
-      // interpreter-method-initializer
       YmkFunction function = new YmkFunction(method.getValue(), environment,
           method.getKey().equals("init"));
 
@@ -358,7 +359,7 @@ public class Interpreter implements
       if (!(deco instanceof YmkCallable)) {
         throw new RuntimeError(null, "Decorator must be callable.");
       }
-      decorated = ((YmkCallable)deco).call(this, List.of(decorated));
+      decorated = ((YmkCallable)deco).call(this, List.of(decorated), Map.of());
     }
 
     // Classes construct-function
@@ -518,6 +519,13 @@ public class Interpreter implements
     return null;
   }
 
+  /**
+   * Checks the type of Map or YmkInstance (object literal)
+   * by checking its shape if it fits the object literal.
+   * @param value The value to type check;
+   * @param typeDef Type definition to check;
+   * @return <b>true</b>, if it has or contains the key; <b>false</b> otherwise;
+   */
   protected boolean isTypeMatchAgainstDef(Object value, Object typeDef) {
     if (typeDef instanceof Expr.ObjectLiteral defStruct) {
       if (!(value instanceof Map<?, ?> || value instanceof YmkInstance)) return false;
@@ -525,18 +533,21 @@ public class Interpreter implements
       for (Expr.ObjectLiteral.Property prop : defStruct.properties) {
         if (prop instanceof Expr.ObjectLiteral.Pair pair) {
           String key = pair.key.lexeme;
+
           if (value instanceof Map<?, ?> valMap) {
             if (!valMap.containsKey(key)) return false;
+
           } else if (value instanceof YmkInstance inst) {
             if (!inst.getFields().containsKey(key)) return false;
           }
           // Optional: resolve expected type via prop.value and check `typeof(value.get(key))`
         }
       }
+
       return true;
     }
 
-    return true; // fallback: not enforced
+    return true; // fallback: not enforced when type-def is not an object literal
   }
 
   @Override
@@ -697,7 +708,7 @@ public class Interpreter implements
     if (method != null && left instanceof YmkInstance) {
       Object overload = ((YmkInstance) left).getOverload(method, this);
       if (overload instanceof YmkCallable fn) {
-        return fn.call(this, List.of(right));
+        return fn.call(this, List.of(right), null);
       }
     }
 
@@ -822,36 +833,40 @@ public class Interpreter implements
   public Object visitCallExpr(Expr.Call expr) {
     Object callee = evaluate(expr.callee);
 
-    List<Object> arguments = new ArrayList<>();
-    for (Expr argument : expr.arguments) {
-      arguments.add(evaluate(argument));
+    List<Object> args = new ArrayList<>();
+    for (Expr argExpr : expr.positionalArgs) {
+      args.add(evaluate(argExpr));
+    }
+
+    Map<String, Object> kwargs = new HashMap<>();
+    for (Map.Entry<String, Expr> entry : expr.keywordArgs.entrySet()) {
+      kwargs.put(entry.getKey(), evaluate(entry.getValue()));
     }
 
     if (callee instanceof JavaClassWrapper) {
-      return ((JavaClassWrapper) callee).call(arguments);
+      return ((JavaClassWrapper) callee).call(args);
     }
     if (callee instanceof JavaInstanceMethod) {
-      return ((JavaInstanceMethod) callee).call(arguments);
+      return ((JavaInstanceMethod) callee).call(args);
     }
     if (callee instanceof JavaStaticMethod) {
-      return ((JavaStaticMethod) callee).call(arguments);
+      return ((JavaStaticMethod) callee).call(args);
     }
 
     // check-is-callable
-    if (!(callee instanceof YmkCallable)) {
+    if (!(callee instanceof YmkCallable function)) {
       throw new RuntimeError(expr.paren,
           "Can only call functions and classes.");
     }
 
-    YmkCallable function = (YmkCallable)callee;
     // check-arity
-    if (function.arity() != -2 && arguments.size() != function.arity()) {
+    if (function.arity() > -1 && (args.size() != function.arity())) {
       throw new RuntimeError(expr.paren, "Expected " +
           function.arity() + " arguments but got " +
-          arguments.size() + ".");
+          args.size() + ".");
     }
 
-    return function.call(this, arguments);
+    return function.call(this, args, kwargs);
   }
 
   @Override
@@ -1388,6 +1403,30 @@ public class Interpreter implements
     return true;
   }
 
+  /**
+   * Checks if the value is of expected type.
+   * @param value Value to check against;
+   * @param expectedType Expected type of
+   *                     (int, number, bool, string, function,
+   *                     array/list, map/object; defaults to true);
+   * @return <b>true</b>, if it matches the type; <b>false</b> otherwise.
+   */
+  boolean isTypeMatch(Object value, String expectedType) {
+    switch (expectedType) {
+      case "int": return value instanceof Integer;
+      case "number": return value instanceof Double;
+      case "bool": return value instanceof Boolean;
+      case "string": return value instanceof String;
+      case "function": return value instanceof YmkCallable;
+      case "array":
+      case "list": return value instanceof List;
+      case "map":
+      case "object": return value instanceof Map || value instanceof YmkInstance;
+      default: return true;
+    }
+  }
+
+
   private boolean isEqual(Object a, Object b) {
     if (a == null && b == null) return true;
     if (a == null) return false;
@@ -1454,20 +1493,5 @@ public class Interpreter implements
 
     return object.toString();
   }
-
-  boolean isTypeMatch(Object value, String expectedType) {
-    switch (expectedType) {
-      case "int": return value instanceof Integer;
-      case "number": return value instanceof Double;
-      case "bool": return value instanceof Boolean;
-      case "string": return value instanceof String;
-      case "function": return value instanceof YmkCallable;
-      case "list": return value instanceof List;
-      case "map":
-      case "object": return value instanceof Map || value instanceof YmkInstance;
-      default: return true;
-    }
-  }
-
 
 }
