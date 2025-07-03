@@ -25,3 +25,5 @@
 
 ## Examples:
 > See [helloWorld](./helloWorld.ymk)
+---
+**Enjoy!**
