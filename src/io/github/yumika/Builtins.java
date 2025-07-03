@@ -22,7 +22,7 @@ public class Builtins {
       }
 
       @Override
-      public Object call(Interpreter interpreter, List<Object> arguments) {
+      public Object call(Interpreter interpreter, List<Object> arguments, Map<String, Object> kwargs) {
         Object value = arguments.get(0);
 
         return interpreter.getTypeName(value);
@@ -46,7 +46,7 @@ public class Builtins {
       }
 
       @Override
-      public Object call(Interpreter interpreter, List<Object> arguments) {
+      public Object call(Interpreter interpreter, List<Object> arguments, Map<String, Object> kwargs) {
         StringBuilder strBuilder = new StringBuilder();
         boolean isEmpty = true;
         for (Object argument : arguments) {
@@ -68,7 +68,7 @@ public class Builtins {
       }
 
       @Override
-      public Object call(Interpreter interpreter, List<Object> arguments) {
+      public Object call(Interpreter interpreter, List<Object> arguments, Map<String, Object> kwargs) {
         if (arguments.get(0) instanceof List<?> list) {
           return list.size();
         } else if (arguments.get(0) instanceof String string) {
@@ -86,7 +86,8 @@ public class Builtins {
 
       @Override
       public Object call(Interpreter interpreter,
-                         List<Object> arguments) {
+                         List<Object> arguments,
+                         Map<String, Object> kwargs) {
         return (double)System.currentTimeMillis() / 1000.0;
       }
 
@@ -145,7 +146,8 @@ public class Builtins {
 
       @Override
       public Void call(Interpreter interpreter,
-                       List<Object> arguments) {
+                       List<Object> arguments,
+                       Map<String, Object> kwargs) {
         System.exit(0);
         return null;
       }
