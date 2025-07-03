@@ -465,7 +465,7 @@ public class Interpreter implements
   public Void visitPrintStmt(Stmt.Print stmt) {
     resolve(stmt.expression, 0);
     Object value = evaluate(stmt.expression);
-    System.out.println(stringify(value));
+    print(value, "\n");
     return null;
   }
 
@@ -473,8 +473,12 @@ public class Interpreter implements
   public Void visitPutsStmt(Stmt.Puts stmt) {
     resolve(stmt.expression, 0);
     Object value = evaluate(stmt.expression);
-    System.out.print(stringify(value));
+    print(value);
     return null;
+  }
+
+  private void print(Object ...args) {
+    System.out.print(stringify(0, args));
   }
 
   @Override
@@ -829,7 +833,7 @@ public class Interpreter implements
     }
 
     throw new RuntimeError(expr.operator,
-        "Operator '" + op + "' not supported for " + stringify(left));
+        "Operator '" + op + "' not supported for " + stringify(left, 0));
 
     // Unreachable.
 //    return null;
@@ -1454,10 +1458,10 @@ public class Interpreter implements
       boolean ret = isTypeMatchAgainstDef(typeDef, value);
       if (ret) return true;
     }
-    return true;
+    return false;
   }
 
-  private String repeatString(String str, int times) {
+  static String repeatString(String str, int times) {
     if (times < 0) return "";
     StringBuilder builder = new StringBuilder(str.length() * times);
     for (int i = 0; i < times; i++) {
@@ -1466,10 +1470,28 @@ public class Interpreter implements
     return builder.toString();
   }
 
-  private String stringify(List<?> list) {
+  private static String stringify(List<?> list, int depth) {
+
     StringBuilder sb = new StringBuilder();
     boolean notEmpty = false;
-    sb.append("[");
+
+    if (list.isEmpty()) return "\n\n" + list.toString() + "\n\n";
+    var first = list.get(0);
+    int matchCount = 0;
+    for (Object item : list) {
+      if (item.toString().equals(first.toString())) {
+        matchCount++;
+      }
+    };
+    if (list.size() > 9 && matchCount == list.size()) {
+      sb.append(repeatString(" ", depth * 2)).append('[');
+      for (int i = 0; i < 10; i++) {
+        sb.append(first.toString()).append(", ");
+      }
+      return sb.append("(...").append(list.size() - 10).append(" more times) ]").toString();
+    }
+
+    sb.append(repeatString(" ", (depth - 1) * 2)).append("[");
     for (Object element : list) {
       if (element instanceof Double) {
         sb.append(String.format("%s, ", element));
@@ -1487,7 +1509,19 @@ public class Interpreter implements
     return sb.toString();
   }
 
-  protected String stringify(Object object) {
+  protected static String stringify(int depth, Object ...args) {
+    StringBuilder builder = new StringBuilder();
+    boolean removeTrailingSpace = false;
+    for (Object arg : args) {
+      builder.append(stringify(arg, depth)).append(" ");
+      removeTrailingSpace = true;
+    }
+    if (removeTrailingSpace)
+      builder.delete(builder.length() - 1, builder.length());
+    return builder.toString();
+  }
+
+  protected static String stringify(Object object, int depth) {
     if (object == null) return "null";
 
     if (object instanceof Double) {
@@ -1499,34 +1533,56 @@ public class Interpreter implements
       return text;
 
     } else if (object instanceof List<?> list) {
-      return stringify(list);
+      return stringify(list, depth + 1);
 
     } else if (object instanceof Expr.ObjectLiteral objLiteral) {
       StringBuilder pairBuilder = new StringBuilder();
       pairBuilder.append(" {");
       for (Expr.ObjectLiteral.Property prop : objLiteral.properties) {
         if (prop instanceof Expr.ObjectLiteral.Pair pair) {
-          pairBuilder.append("\n\t").append(stringify(pair.key.lexeme)).append(" -> ");
+          pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
+              .append(stringify(pair.key.lexeme, depth + 3)).append(" -> ");
           if (pair.value instanceof Expr.Variable var) {
-            pairBuilder.append(stringify(var.name.lexeme)).append(";");
+            pairBuilder.append(stringify(0, var.name.lexeme)).append(";");
           }
         }
       }
-      pairBuilder.append("\n}\n");
+      pairBuilder.append("\n").append(repeatString(" ", (depth + 2) * 2))
+          .append("}");
       return pairBuilder.toString();
 
     } else if (object instanceof YmkInstance inst) {
       StringBuilder pairBuilder = new StringBuilder();
+      boolean removeTrailingComma = false;
       pairBuilder.append(" {");
       for ( Map.Entry<?, ?> entry : inst.getFields().entrySet() ) {
-        pairBuilder.append("\n\t").append(stringify(entry.getKey())).append(" -> ");
-        pairBuilder.append(stringify(entry.getValue())).append(",");
+        pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
+            .append(stringify(entry.getKey(), depth + 3)).append(" -> ");
+        pairBuilder.append(stringify(0, entry.getValue())).append(",");
+        removeTrailingComma = true;
       }
-      pairBuilder.append("\n}\n");
+      if (removeTrailingComma)
+        pairBuilder.delete(pairBuilder.length() - 1, pairBuilder.length());
+      pairBuilder.append("\n").append(repeatString(" ", (depth + 2) * 2))
+          .append("}");
+      return pairBuilder.toString();
+    } else if (object instanceof Map<?, ?> objMap) {
+      StringBuilder pairBuilder = new StringBuilder("{");
+      boolean removeTrailingComma = false;
+      for (Map.Entry<?, ?> entry : objMap.entrySet()) {
+        pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
+            .append(stringify(entry.getKey(), depth + 1 )).append(" -> ");
+        pairBuilder.append(stringify(0, entry.getValue())).append(",");
+        removeTrailingComma = true;
+      }
+      if (removeTrailingComma)
+        pairBuilder.delete(pairBuilder.length() - 1, pairBuilder.length());
+      pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
+          .append("}");
       return pairBuilder.toString();
     }
 
-    return object.toString();
+    return repeatString(" ", depth * 2) + object.toString();
   }
 
 }
