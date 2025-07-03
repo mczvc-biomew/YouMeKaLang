@@ -51,6 +51,7 @@ public class Interpreter implements
 
   void initGlobalDefinitions(Environment globalEnv) {
     globalEnv.define("undefined", YmkUndefined.INSTANCE);
+    globalEnv.define("__types__", new YmkInstance(new YmkClass("__types__", null, null)));
     globalEnv.define("__builtins__", Builtins.loadBuiltins(this));
   }
 
@@ -138,22 +139,27 @@ public class Interpreter implements
       resolve(expr, depth);
       return true;
     }
+
     if (expr instanceof Expr.Binary) {
       boolean leftResult = resolveLogical(((Expr.Binary)expr).left, depth);
       boolean rightReult = resolveLogical(((Expr.Binary)expr).right, depth);
       return leftResult || rightReult;
+
     } else if (expr instanceof Expr.Unary) {
       return resolveLogical(((Expr.Unary) expr).right, depth);
+
     } else if (expr instanceof Expr.Function function) {
       boolean funcResult = true;
       for (Stmt funcStmts : function.body) {
         funcResult = resolveStmt(funcStmts, depth);
       }
       return funcResult;
+
     } else if (expr instanceof Expr.Get getExpr) {
       boolean getResult = true;
       getResult |= resolveLogical(getExpr.object, depth);
       return getResult;
+
     } else if (expr instanceof Expr.Set setExpr) {
       boolean setResult = true;
       setResult |= resolveLogical(setExpr.object, depth);
@@ -257,6 +263,7 @@ public class Interpreter implements
     Object superclass = null;
     if (stmt.superclass != null) {
       superclass = evaluate(stmt.superclass);
+
       if (!(superclass instanceof YmkClass)) {
         throw new RuntimeError(stmt.superclass.name,
             "Superclass must be a class.");
@@ -265,6 +272,7 @@ public class Interpreter implements
 
     for (Token interfaceName : stmt.interfaces) {
       Object interfaceObj = environment.get(interfaceName);
+
       if (!(interfaceObj instanceof Stmt.Interface iface)) {
         throw new RuntimeError(interfaceName,
             "Unknown interface: " + interfaceName.lexeme);
@@ -278,7 +286,6 @@ public class Interpreter implements
         }
       }
     }
-
 
     // Inheritance interpret-superclass
     environment.define(stmt.name.lexeme, null);
@@ -297,7 +304,6 @@ public class Interpreter implements
       methods.put(method.getValue().name.lexeme, function);
     }
 
-    // Inheritance interpreter-construct-class
     YmkClass klass = new YmkClass(stmt.name.lexeme,
         (YmkClass)superclass, methods);
 
@@ -322,9 +328,11 @@ public class Interpreter implements
 
       if (object instanceof Map) {
         value = ((Map<?, ?>) object).getOrDefault(key, null);
+
       } else if (object instanceof YmkInstance) {
         try {
-          value = ((YmkInstance) object).get(new Token(TokenType.IDENTIFIER, key, null, 0), this);
+          value = ((YmkInstance) object).get(new Token(TokenType.IDENTIFIER, key, null, 0),
+              this);
         } catch (RuntimeError re) {
           value = null;
         }
@@ -351,11 +359,12 @@ public class Interpreter implements
   public Void visitFunctionStmt(Stmt.Function stmt) {
     YmkFunction function = new YmkFunction(stmt, environment,
         false);
-
     Object decorated = function;
+
     for (int i = stmt.decorators.size() - 1; i >= 0; i--) {
       resolveLogical(stmt.decorators.get(i), 0);
       Object deco = evaluate(stmt.decorators.get(i));
+
       if (!(deco instanceof YmkCallable)) {
         throw new RuntimeError(null, "Decorator must be callable.");
       }
@@ -454,7 +463,6 @@ public class Interpreter implements
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
-    // @TODO: add variable expression resolution here(!!)
     resolve(stmt.expression, 0);
     Object value = evaluate(stmt.expression);
     System.out.println(stringify(value));
@@ -497,6 +505,9 @@ public class Interpreter implements
 
   @Override
   public Void visitTypeDefStmt(Stmt.TypeDef stmt) {
+    YmkInstance userTypes = (YmkInstance) globals.get("__types__");
+    userTypes.getFields().put(stmt.name.lexeme, stmt.definition);
+
     environment.define(stmt.name.lexeme, stmt.definition);
     return null;
   }
@@ -528,8 +539,22 @@ public class Interpreter implements
    */
   protected boolean isTypeMatchAgainstDef(Object value, Object typeDef) {
     if (typeDef instanceof Expr.ObjectLiteral defStruct) {
-      if (!(value instanceof Map<?, ?> || value instanceof YmkInstance)) return false;
+      if (!(value instanceof Map<?, ?> || value instanceof YmkInstance
+          || value instanceof Expr.ObjectLiteral)) return false;
+      if (value instanceof Expr.ObjectLiteral objLiteral) {
+//        if (!(objLiteral.properties instanceof Expr.ObjectLiteral.Pair)) return false;
+        var typeA = new ArrayList<String>();
+        objLiteral.properties.forEach(a -> {
+          typeA.add( a instanceof Expr.ObjectLiteral.Pair pairA ? pairA.key.lexeme : null );
+        } );
+        var typeB = new ArrayList<String>();
+        defStruct.properties.forEach(b -> {
+          typeB.add( b instanceof Expr.ObjectLiteral.Pair pairB ? pairB.key.lexeme : null );
+        });
 
+        boolean all = typeB.containsAll(typeA);
+        return all;
+      }
       for (Expr.ObjectLiteral.Property prop : defStruct.properties) {
         if (prop instanceof Expr.ObjectLiteral.Pair pair) {
           String key = pair.key.lexeme;
@@ -672,7 +697,7 @@ public class Interpreter implements
   public Object visitAssignExpr(Expr.Assign expr) {
     Object value = evaluate(expr.value);
 
-    // Resolving and Binding resolved-assign
+    // reassigning designated name at local (and enclosing) distance with value
     Integer distance = locals.get(expr);
     if (distance != null) {
       environment.assignAt(distance, expr.name, value);
@@ -810,15 +835,6 @@ public class Interpreter implements
 //    return null;
   }
 
-  private String repeatString(String str, int times) {
-    if (times < 0) return "";
-    StringBuilder builder = new StringBuilder(str.length() * times);
-    for (int i = 0; i < times; i++) {
-      builder.append(str);
-    }
-    return builder.toString();
-  }
-
   @Override
   public Object visitBlockExpr(Expr.Block expr) {
     try {
@@ -923,7 +939,6 @@ public class Interpreter implements
 
     Object object = evaluate(expr.object);
 
-    // @TODO: implement this functionality
     if ("__class__".equals(expr.name.lexeme)) {
       return getTypeName(object);
     }
@@ -1365,6 +1380,7 @@ public class Interpreter implements
     if (value instanceof Boolean) return "Boolean";
     if (value instanceof List<?>) return "Array";
     if (value instanceof YmkLambda || value instanceof YmkFunction) return "Function";
+    if (value instanceof Expr.ObjectLiteral && isTypeDef(value)) return "TypeDef";
     if (value instanceof YmkInstance) return "Object";
 
     return "Unknown";
@@ -1426,12 +1442,28 @@ public class Interpreter implements
     }
   }
 
-
   private boolean isEqual(Object a, Object b) {
     if (a == null && b == null) return true;
     if (a == null) return false;
 
     return a.equals(b);
+  }
+
+  private boolean isTypeDef(Object typeDef) {
+    for ( Object value : ((YmkInstance)globals.get("__types__")).getFields().values() ) {
+      boolean ret = isTypeMatchAgainstDef(typeDef, value);
+      if (ret) return true;
+    }
+    return true;
+  }
+
+  private String repeatString(String str, int times) {
+    if (times < 0) return "";
+    StringBuilder builder = new StringBuilder(str.length() * times);
+    for (int i = 0; i < times; i++) {
+      builder.append(str);
+    }
+    return builder.toString();
   }
 
   private String stringify(List<?> list) {
@@ -1465,11 +1497,13 @@ public class Interpreter implements
       }
 
       return text;
+
     } else if (object instanceof List<?> list) {
       return stringify(list);
+
     } else if (object instanceof Expr.ObjectLiteral objLiteral) {
       StringBuilder pairBuilder = new StringBuilder();
-      pairBuilder.append("\n{");
+      pairBuilder.append(" {");
       for (Expr.ObjectLiteral.Property prop : objLiteral.properties) {
         if (prop instanceof Expr.ObjectLiteral.Pair pair) {
           pairBuilder.append("\n\t").append(stringify(pair.key.lexeme)).append(" -> ");
@@ -1480,9 +1514,10 @@ public class Interpreter implements
       }
       pairBuilder.append("\n}\n");
       return pairBuilder.toString();
+
     } else if (object instanceof YmkInstance inst) {
       StringBuilder pairBuilder = new StringBuilder();
-      pairBuilder.append("\n{");
+      pairBuilder.append(" {");
       for ( Map.Entry<?, ?> entry : inst.getFields().entrySet() ) {
         pairBuilder.append("\n\t").append(stringify(entry.getKey())).append(" -> ");
         pairBuilder.append(stringify(entry.getValue())).append(",");
