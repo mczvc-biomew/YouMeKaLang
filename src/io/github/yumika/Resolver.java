@@ -92,14 +92,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     beginScope();
     scopes.peek().put("this", true);
 
-    for (Stmt.Function method : stmt.methods) {
+    for (Map.Entry<String, Stmt.Function> method : stmt.methods.entrySet()) {
       FunctionType declaration = FunctionType.METHOD;
 
-      if (method.name.lexeme.equals("init")) {
+      if (method.getKey().equals("init")) {
         declaration = FunctionType.INITIALIZER;
       }
 
-      resolveFunction(method, declaration);
+      resolveFunction(method.getValue(), declaration);
     }
 
     // resolver-end-this-scope
@@ -166,6 +166,18 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 
+  @Override
+  public Void visitInterfaceStmt(Stmt.Interface stmt) {
+    declare(stmt.name);
+    define(stmt.name);
+
+    for (Stmt.Function method : stmt.methods) {
+      declare(method.name);
+      define(method.name);
+    }
+
+    return null;
+  }
 
   @Override
   public Void visitPrintStmt(Stmt.Print stmt) {
@@ -215,6 +227,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     resolve(stmt.catchBlock);
     endScope();
 
+    return null;
+  }
+
+  @Override
+  public Void visitTypeDefStmt(Stmt.TypeDef stmt) {
+    declare(stmt.name);
+    define(stmt.name);
+    resolve(stmt.definition);
     return null;
   }
 
@@ -289,8 +309,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   public Void visitCallExpr(Expr.Call expr) {
     resolve(expr.callee);
 
-    for (Expr argument : expr.arguments) {
+    for (Expr argument : expr.positionalArgs) {
       resolve(argument);
+    }
+
+    for (Expr kwarg : expr.keywordArgs.values()) {
+      resolve(kwarg);
     }
 
     return null;
@@ -333,6 +357,14 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   @Override
   public Void visitGroupingExpr(Expr.Grouping expr) {
     resolve(expr.expression);
+    return null;
+  }
+
+  @Override
+  public Void visitInterpolatedStringExpr(Expr.InterpolatedString expr) {
+    for (Expr part : expr.parts) {
+      resolve(part);
+    }
     return null;
   }
 

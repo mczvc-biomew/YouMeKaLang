@@ -24,6 +24,12 @@ class Environment {
     return index;
   }
 
+  boolean exists(String name) {
+    if (values.containsKey(name)) return true;
+    if (enclosing != null) return enclosing.exists(name);
+    return false;
+  }
+
   Object get(Token name) {
     return get(name.lexeme);
   }
@@ -83,11 +89,12 @@ class Environment {
 
   @Override
   public String toString() {
-    String result = values.toString();
+    StringBuilder result = new StringBuilder( CUtils.stringify(values, 0) );
+    result.append("\n");
     if (enclosing != null) {
-      result += " -> " + enclosing.toString();
+      result.append(" -> ").append(CUtils.stringify(0, enclosing));
     }
 
-    return result;
+    return "Environment: " + result.toString() + "::\n";
   }
 }

@@ -20,7 +20,7 @@ public class YmkInstance {
     if (fields.containsKey(name)) {
       return fields.get(name);
     }
-    if (getters.containsKey(name)) return getters.get(name).call(interpreter, List.of());
+    if (getters.containsKey(name)) return getters.get(name).call(interpreter, List.of(), Map.of());
 
     YmkFunction method = klass.findMethod(name);
 
@@ -40,7 +40,7 @@ public class YmkInstance {
   protected void set(Token name, Object value, Interpreter interpreter) { set(name.lexeme, value, interpreter); }
   void set(String name, Object value, Interpreter interpreter) {
     if (setters.containsKey(name)) {
-      setters.get(name).call(interpreter, List.of(value));
+      setters.get(name).call(interpreter, List.of(value), Map.of());
     } else {
       fields.put(name, value);
     }

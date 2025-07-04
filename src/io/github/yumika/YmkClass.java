@@ -33,11 +33,12 @@ public class YmkClass implements YmkCallable {
 
   @Override
   public Object call(Interpreter interpreter,
-                     List<Object> arguments) {
+                     List<Object> arguments,
+                     Map<String, Object> kwargs) {
     YmkInstance instance = new YmkInstance(this);
     YmkFunction initializer = findMethod("init");
     if (initializer != null) {
-      initializer.bind(instance).call(interpreter, arguments);
+      initializer.bind(instance).call(interpreter, arguments, Map.of());
     }
 
     return instance;

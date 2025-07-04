@@ -1,6 +1,7 @@
 package io.github.yumika;
 
 import java.util.List;
+import java.util.Map;
 
 abstract class Expr {
   interface Visitor<R> {
@@ -15,6 +16,7 @@ abstract class Expr {
     R visitFunctionExpr(Function expr);
     R visitGetExpr(Get expr);
     R visitGroupingExpr(Grouping expr);
+    R visitInterpolatedStringExpr(InterpolatedString expr);
     R visitLambdaExpr(Lambda expr);
     R visitListComprehensionExpr(ListComprehension expr);
     R visitListLiteralExpr(ListLiteral expr);
@@ -132,10 +134,12 @@ abstract class Expr {
   }
 
   static class Call extends Expr {
-    Call(Expr callee, Token paren, List<Expr> arguments) {
+    Call(Expr callee, Token paren, List<Expr> positionalArgs,
+         Map<String, Expr> keywordArgs) {
       this.callee = callee;
       this.paren = paren;
-      this.arguments = arguments;
+      this.positionalArgs = positionalArgs;
+      this.keywordArgs = keywordArgs;
     }
 
     @Override
@@ -143,7 +147,8 @@ abstract class Expr {
 
     final Expr callee;
     final Token paren;
-    final List<Expr> arguments;
+    final List<Expr> positionalArgs;
+    final Map<String, Expr> keywordArgs;
   }
 
   static class Case extends Expr {
@@ -248,6 +253,15 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitGroupingExpr(this); }
 
     final Expr expression;
+  }
+
+  static class InterpolatedString extends Expr {
+    InterpolatedString(List<Expr> parts) {
+      this.parts = parts;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitInterpolatedStringExpr(this); }
+    final List<Expr> parts;
   }
 
   static class Lambda extends Expr {

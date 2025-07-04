@@ -1,6 +1,8 @@
 fun hello() {
     var hi = "Hello";
     var welcome = "welcome";
+    puts hi;
+    puts " ";
     return {
         world: " World!",
         greetings: || hi + this.world,
@@ -8,3 +10,19 @@ fun hello() {
         greetings3: || this.greetings2() + "!"
     };
 }
+
+interface Greeter {
+    greet(msg: string, *args, **kwargs);
+}
+
+class ConcreteGreeter > Greeter {}
+class CompleteGreeter > Greeter {
+    greet(msg: string, *args, **kwargs) {
+        print msg;
+        print args;
+        print kwargs;
+    }
+}
+
+var cg = CompleteGreeter();
+cg.greet("Hello World [test]", "test1", "test2", test123: "test");

@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   String print(Expr expr) { return expr.accept(this); }
@@ -45,8 +46,8 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
       builder.append(" < " + print(stmt.superclass));
     }
 
-    for (Stmt.Function method : stmt.methods) {
-      builder.append(" " + print(method));
+    for (Map.Entry<String, Stmt.Function> method : stmt.methods.entrySet()) {
+      builder.append(" " + print(method.getValue()));
     }
 
     builder.append(")");
@@ -98,6 +99,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitInterfaceStmt(Stmt.Interface stmt) {
+    return parenthesize2("interface", stmt.name, stmt.methods);
+  }
+
+  @Override
   public String visitPrintStmt(Stmt.Print stmt) { return parenthesize("print", stmt.expression); }
 
   @Override
@@ -117,6 +123,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   @Override
   public String visitTryCatchStmt(Stmt.TryCatch stmt) {
     return parenthesize2("try (catch)", stmt.errorVar);
+  }
+
+  @Override
+  public String visitTypeDefStmt(Stmt.TypeDef stmt) {
+    return parenthesize2("type definition", stmt.name, stmt.definition);
   }
 
   @Override
@@ -157,7 +168,7 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
-  public String visitCallExpr(Expr.Call expr) { return parenthesize2("call", expr.callee, expr.arguments); }
+  public String visitCallExpr(Expr.Call expr) { return parenthesize2("call", expr.callee, expr.positionalArgs, expr.keywordArgs); }
 
   @Override
   public String visitCaseExpr(Expr.Case expr) {
@@ -188,6 +199,10 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   @Override
   public String visitGroupingExpr(Expr.Grouping expr) { return parenthesize("group", expr.expression); }
 
+  @Override
+  public String visitInterpolatedStringExpr(Expr.InterpolatedString expr) {
+    return parenthesize2("template-string", expr.parts);
+  }
   @Override
   public String visitLambdaExpr(Expr.Lambda expr) {
     return parenthesize2("lambda", expr.body, expr.params);

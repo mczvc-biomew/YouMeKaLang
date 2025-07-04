@@ -3,6 +3,8 @@ package io.github.yumika;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import static io.github.yumika.TokenType.*;
 
@@ -32,9 +34,13 @@ class Parser {
     try {
       if (match(CLASS)) return classDeclaration();
 
+      if (match(INTERFACE)) return interfaceDeclaration();
+
       if (check(AT) || match(FUN)) return functionStatement("function");
 
       if (match(VAR)) return varDeclaration();
+
+      if (match(TYPE)) return typeDefinition();
 
       return statement();
     } catch (ParseError error) {
@@ -52,16 +58,24 @@ class Parser {
       superclass = new Expr.Variable(previous());
     }
 
+    List<Token> interfaces = new ArrayList<>();
+    if (match(GREATER)) {
+      do {
+        interfaces.add(consume(IDENTIFIER, "Expect interface name."));
+      } while (match(COMMA));
+    }
+
     consume(LEFT_BRACE, "Expect '{' before class body.");
 
-    List<Stmt.Function> methods = new ArrayList<>();
+    Map<String, Stmt.Function> methods = new HashMap<>();
     while (!check(RIGHT_BRACE) && !isAtEnd()) {
-      methods.add(functionStatement("method"));
+      Stmt.Function funStatement = functionStatement("method");
+      methods.put(funStatement.name.lexeme, funStatement);
     }
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-    return new Stmt.Class(name, superclass, methods);
+    return new Stmt.Class(name, superclass, interfaces, methods);
   }
 
   private Stmt statement() {
@@ -195,6 +209,20 @@ class Parser {
     return new Stmt.Import(pathParts, path, alias);
   }
 
+  private Stmt interfaceDeclaration() {
+    Token name = consume(IDENTIFIER, "Expect interface name.");
+    consume(LEFT_BRACE, "Expect '{' after interface name.");
+
+    List<Stmt.Function> methods = new ArrayList<>();
+
+    while (!check(RIGHT_BRACE) && !isAtEnd()) {
+      methods.add(functionSignature("method"));
+    }
+
+    consume(RIGHT_BRACE, "Expect '}' after interface body.");
+    return new Stmt.Interface(name, methods);
+  }
+
   private Stmt printStatement() {
     Expr value = expression();
     consume(SEMICOLON, "Expect ';' after value.");
@@ -244,6 +272,20 @@ class Parser {
     return new Stmt.TryCatch(tryBlock, errorVar, catchBlock);
   }
 
+  private Stmt typeDefinition() {
+    Token name = consume(IDENTIFIER, "Expect type name.");
+    consume(EQUAL, "Expect '=' after type name.");
+
+    Expr structure = parseTypeStructure();
+    consume(SEMICOLON, "Expect ';' after type definition.");
+
+    return new Stmt.TypeDef(name, structure);
+  }
+
+  private Expr parseTypeStructure() {
+    return parsePattern();
+  }
+
   private Stmt varDeclaration() {
     if (match(TokenType.LEFT_BRACE)) {
       // object destructuring: var {a, b, c = "default"} = expr;
@@ -256,6 +298,11 @@ class Parser {
 
     Token name = consume(IDENTIFIER, "Expect variable name.");
 
+    Token typeAnnotation = null;
+    if (match(COLON)) {
+      typeAnnotation = consume(IDENTIFIER, "Expect type name after ':'.");
+    }
+
     Expr initializer = null;
     if (match(EQUAL)) {
       initializer = expression();
@@ -263,7 +310,7 @@ class Parser {
 
     consume(SEMICOLON, "Expect ';' after variable declaration.");
 
-    return new Stmt.Var(name, initializer);
+    return new Stmt.Var(name, typeAnnotation, initializer);
   }
 
   private List<Stmt.DestructuringVarStmt.DestructuringField> parseDestructuringPattern() {
@@ -328,16 +375,14 @@ class Parser {
           error(peek(), "Maximum of 255 parameters.");
         }
 
-        if (match(STAR)) {
-          if (match(STAR)) {
+        if (match(STAR_STAR)) {
+          hasVarKwargs = true;
+          kwArgsName = consume(IDENTIFIER, "Expect name for keyword arguments.");
+//          parameters.add(kwArgsName);
+        } else if (match(STAR)) {
             hasVarArgs = true;
             varArgsName = consume(IDENTIFIER, "Expect name for variable arguments.");
-            parameters.add(varArgsName);
-          } else {
-            hasVarArgs = true;
-            kwArgsName = consume(IDENTIFIER, "Expect name for keyword arguments.");
-            parameters.add(kwArgsName);
-          }
+//            parameters.add(varArgsName);
         } else {
           parameters.add(
               consume(IDENTIFIER, "Expect parameter name."));
@@ -366,7 +411,11 @@ class Parser {
 
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
-    return new Stmt.Function(name, decorators, parameters, paramTypes, returnType, body, hasVarArgs, hasVarKwargs, varArgsName, kwArgsName );
+    return new Stmt.Function(name, decorators,
+        parameters, paramTypes,
+        returnType, body,
+        hasVarArgs, hasVarKwargs,
+        varArgsName, kwArgsName );
   }
 
   private List<Stmt> block() {
@@ -529,19 +578,27 @@ class Parser {
 
   private Expr finishCall(Expr callee) {
     List<Expr> arguments = new ArrayList<>();
+    Map<String, Expr> keywordArgs = new HashMap<>();
 
     if (!check(RIGHT_PAREN)) {
       do {
         if (arguments.size() >= 255) {
           error(peek(), "Maximum of 255 arguments.");
         }
-        arguments.add(expression());
+        if (check(IDENTIFIER) && peekNext().type == COLON) {
+          Token key = consume(IDENTIFIER, "Expect keyword argument.");
+          consume(COLON, "Expect ':' after keyword name.");
+          Expr value = expression();
+          keywordArgs.put(key.lexeme, value);
+        } else {
+          arguments.add(expression());
+        }
       } while (match(COMMA));
     }
 
     Token paren = consume(RIGHT_PAREN,
         "Expect ')' after arguments.");
-    return new Expr.Call(callee, paren, arguments);
+    return new Expr.Call(callee, paren, arguments, keywordArgs);
   }
 
   private Expr call() {
@@ -585,6 +642,20 @@ class Parser {
 
     if (match(NUMBER, STRING)) {
       return new Expr.Literal(previous().literal);
+    }
+
+    if (match(TEMPLATE_STRING)) {
+      List<Object> parts = (List<Object>) previous().literal;
+      List<Expr> expressions = new ArrayList<>();
+
+      for (Object part : parts) {
+        if (part instanceof String str) {
+          expressions.add(new Expr.Literal(str));
+        } else if (part instanceof Token token) {
+          expressions.add(parseTemplateExpr(token));
+        }
+      }
+      return new Expr.InterpolatedString(expressions);
     }
 
     if (match(SUPER)) {
@@ -696,7 +767,61 @@ class Parser {
     consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
     List<Stmt> body = block();
     return new Expr.Function(decorators, parameters, paramTypes, returnType, body);
+  }
 
+  private Stmt.Function functionSignature(String kind) {
+    Token name = consume(TokenType.IDENTIFIER, "Expect " + kind + " name.");
+    consume(TokenType.LEFT_PAREN, "Expect '(' after " + kind + " name.");
+
+    List<Token> params = new ArrayList<>();
+    List<Token> paramTypes = new ArrayList<>();
+    boolean hasVarArgs = false;
+    boolean hasVarKwargs = false;
+    Token varArgsName = null;
+    Token kwArgsName = null;
+
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        if (match(TokenType.STAR_STAR)) { // **kwargs
+          hasVarKwargs = true;
+          kwArgsName = consume(TokenType.IDENTIFIER, "Expect kwargs name.");
+          break;
+        } else if (match(TokenType.STAR)) { // *args
+          hasVarArgs = true;
+          varArgsName = consume(TokenType.IDENTIFIER, "Expect varargs name.");
+        } else {
+          Token param = consume(TokenType.IDENTIFIER, "Expect parameter name.");
+          Token type = null;
+          if (match(TokenType.COLON)) {
+            type = consume(TokenType.IDENTIFIER, "Expect type name after ':'.");
+          }
+          params.add(param);
+          paramTypes.add(type);
+        }
+      } while (match(TokenType.COMMA));
+    }
+
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.");
+
+    Token returnType = null;
+    if (match(TokenType.COLON)) {
+      returnType = consume(TokenType.IDENTIFIER, "Expect return type after ':'.");
+    }
+
+    consume(TokenType.SEMICOLON, "Expect ';' after " + kind + " signature.");
+
+    return new Stmt.Function(
+        name,
+        new ArrayList<>(), // decorators: none in interface
+        params,
+        paramTypes,
+        returnType,
+        new ArrayList<>(), // body is empty in signature
+        hasVarArgs,
+        hasVarKwargs,
+        varArgsName,
+        kwArgsName
+    );
   }
 
   private Expr lambda() {
@@ -963,6 +1088,15 @@ class Parser {
     return new Expr.ObjectLiteral(properties);
   }
 
+  private Expr parseTemplateExpr(Token token) {
+    String exprSource = token.lexeme;
+    Scanner scanner = new Scanner(exprSource);
+    List<Token> innerTokens = scanner.scanTokens();
+
+    Parser subParser = new Parser(innerTokens);
+    return subParser.expression();
+  }
+
   private boolean match(TokenType... types) {
     for (TokenType type : types) {
       if (check(type)) {
@@ -998,6 +1132,11 @@ class Parser {
   private boolean isAtEnd() { return peek().type == EOF; }
 
   private Token peek() { return tokens.get(current); }
+
+  private Token peekNext() {
+    if (current + 1 >= tokens.size()) return tokens.get(tokens.size() - 1); // EOF
+    return tokens.get(current + 1);
+  }
 
   private Token previous() { return tokens.get(current - 1); }
 

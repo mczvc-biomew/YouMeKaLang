@@ -83,6 +83,9 @@ public class YouMeKa {
     if (hadError) return;
 
     try {
+
+      interpreter.initGlobalDefinitions(interpreter.globals);
+      interpreter.initJavaPackage(interpreter.globals);
       interpreter.interpret(statements);
 
       while (interpreter.runningTimers.get() > 0) {
