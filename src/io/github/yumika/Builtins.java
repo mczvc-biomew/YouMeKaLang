@@ -14,7 +14,21 @@ public class Builtins {
         return "__builtins__";
       }
     };
-    builtins.set("env", new YmkEnv(), interpreter);
+    builtins.set("env", new YmkCallable() {
+      @Override
+      public int arity() {
+        return 0;
+      }
+      @Override
+      public Object call(Interpreter interpreter,
+                         List<Object> arguments,
+                         Map<String, Object> kwargs) {
+        return interpreter.getEnvironment();
+      }
+
+      @Override
+      public String toString() { return "<native fn environment>"; }
+    }, interpreter);
     builtins.set("typeof", new YmkCallable() {
       @Override
       public int arity() {
@@ -60,6 +74,9 @@ public class Builtins {
         }
         return strBuilder.toString();
       }
+
+      @Override
+      public String toString() { return "<native fn to-string>"; }
     }, interpreter);
     builtins.set("length", new YmkCallable() {
       @Override
@@ -79,6 +96,9 @@ public class Builtins {
           throw new RuntimeError(null, "Argument doesn't have a length.");
         }
       }
+
+      @Override
+      public String toString() { return "<native fn length>"; }
     }, interpreter);
     builtins.set("clock", new YmkCallable() {
       @Override
@@ -153,7 +173,7 @@ public class Builtins {
       }
 
       @Override
-      public String toString() { return "<native fn>"; }
+      public String toString() { return "<native fn exit>"; }
     }, interpreter);
 
     return builtins;
