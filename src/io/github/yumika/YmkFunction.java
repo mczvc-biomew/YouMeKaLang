@@ -108,9 +108,9 @@ public class YmkFunction implements YmkCallable {
           if (!interpreter.isTypeMatchAgainstDef(argValue, expectedType)) {
             throw new RuntimeError(param,
                 "TypeError: Expected argument of user defined type '"
-                    + paramType.lexeme + " " + Interpreter.stringify(
+                    + paramType.lexeme + " " + CUtils.stringify(
                         expectedType, 0) + "', got: " +
-                    Interpreter.stringify(argValue, 0));
+                    CUtils.stringify(argValue, 0));
           }
         } catch (RuntimeError.UndefinedException error) {
           String expectedType = paramType.lexeme;
