@@ -89,7 +89,7 @@ class Environment {
 
   @Override
   public String toString() {
-    StringBuilder result = new StringBuilder( Interpreter.stringify(values, 1) );
+    StringBuilder result = new StringBuilder( Interpreter.stringify(values, 0) );
     result.append("\n");
     if (enclosing != null) {
       result.append(" -> ").append(Interpreter.stringify(0, enclosing));
