@@ -2,6 +2,7 @@ package io.github.yumika;
 
 import io.github.yumika.javainterop.*;
 import io.github.yumika.modules.YmkMath;
+import io.github.yumika.utils.CUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -478,7 +479,11 @@ public class Interpreter implements
   }
 
   private void print(Object ...args) {
-    System.out.print(stringify(0, args));
+    if (args.length == 1) {
+      System.out.print(stringify(args[0], 0));
+    } else {
+      System.out.print(stringify(0, args));
+    }
   }
 
   @Override
@@ -1521,6 +1526,19 @@ public class Interpreter implements
     return builder.toString();
   }
 
+  private static StringBuilder indentedBrace(StringBuilder sb, int level, int depth) {
+    sb.append(stringify(repeatString(" ", level * 2) + "}", depth));
+    return sb;
+  }
+
+  protected static StringBuilder stringifyPairWithIndent(Object key, String value, int level, String indent,
+                                                  String connector, String separator, StringBuilder pairBuilder) {
+    pairBuilder.append(repeatString(indent, level * 2));
+    pairBuilder.append(stringify(key, level + 1)).append(" ").append(connector).append(" ");
+    pairBuilder.append(value).append(separator);
+    return pairBuilder;
+  }
+
   protected static String stringify(Object object, int depth) {
     if (object == null) return "null";
 
@@ -1537,48 +1555,59 @@ public class Interpreter implements
 
     } else if (object instanceof Expr.ObjectLiteral objLiteral) {
       StringBuilder pairBuilder = new StringBuilder();
-      pairBuilder.append(" {");
+      pairBuilder.append("{");
       for (Expr.ObjectLiteral.Property prop : objLiteral.properties) {
         if (prop instanceof Expr.ObjectLiteral.Pair pair) {
-          pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
-              .append(stringify(pair.key.lexeme, depth + 3)).append(" -> ");
+          pairBuilder.append("\n");
           if (pair.value instanceof Expr.Variable var) {
-            pairBuilder.append(stringify(0, var.name.lexeme)).append(";");
+            stringifyPairWithIndent(
+                pair.key.lexeme, var.name.lexeme,
+                depth + 1, "", "->", ";",
+                pairBuilder);
+          } else {
+            pairBuilder.append(stringify(pair.value, depth));
           }
         }
       }
-      pairBuilder.append("\n").append(repeatString(" ", (depth + 2) * 2))
-          .append("}");
+      pairBuilder.append("\n");
+      indentedBrace(pairBuilder, depth, depth);
       return pairBuilder.toString();
 
     } else if (object instanceof YmkInstance inst) {
       StringBuilder pairBuilder = new StringBuilder();
       boolean removeTrailingComma = false;
-      pairBuilder.append(" {");
+      pairBuilder.append("{");
       for ( Map.Entry<?, ?> entry : inst.getFields().entrySet() ) {
-        pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
-            .append(stringify(entry.getKey(), depth + 3)).append(" -> ");
-        pairBuilder.append(stringify(0, entry.getValue())).append(",");
+        pairBuilder.append("\n");
+        stringifyPairWithIndent(entry.getKey(),
+            stringify(entry.getValue(),
+                CUtils.isPair(entry.getValue()) ? depth+1 : depth),
+            depth, "", "->", ",",
+            pairBuilder);
         removeTrailingComma = true;
       }
       if (removeTrailingComma)
         pairBuilder.delete(pairBuilder.length() - 1, pairBuilder.length());
-      pairBuilder.append("\n").append(repeatString(" ", (depth + 2) * 2))
-          .append("}");
+      pairBuilder.append("\n");
+      indentedBrace(pairBuilder, depth - 1, depth);
       return pairBuilder.toString();
     } else if (object instanceof Map<?, ?> objMap) {
       StringBuilder pairBuilder = new StringBuilder("{");
       boolean removeTrailingComma = false;
       for (Map.Entry<?, ?> entry : objMap.entrySet()) {
-        pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
-            .append(stringify(entry.getKey(), depth + 1 )).append(" -> ");
-        pairBuilder.append(stringify(0, entry.getValue())).append(",");
+        pairBuilder.append("\n");
+
+        stringifyPairWithIndent(entry.getKey(),
+            stringify(entry.getValue(),
+                CUtils.isPair(entry.getValue()) ? depth+1 : 0),
+            depth, "", "->", ",",
+            pairBuilder);
         removeTrailingComma = true;
       }
       if (removeTrailingComma)
         pairBuilder.delete(pairBuilder.length() - 1, pairBuilder.length());
-      pairBuilder.append("\n").append(repeatString(" ", (depth - 1) * 2))
-          .append("}");
+      pairBuilder.append("\n");
+      indentedBrace(pairBuilder, depth - 1, depth);
       return pairBuilder.toString();
     }
 
