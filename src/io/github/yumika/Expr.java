@@ -36,6 +36,7 @@ abstract class Expr {
     R visitUnaryExpr(Unary expr);
     R visitUndefinedExpr(Undefined expr);
     R visitVariableExpr(Variable expr);
+    R visitYieldExpr(Yield expr);
   }
 
   static class ListLiteral extends Expr {
@@ -526,6 +527,19 @@ abstract class Expr {
     public String toString() {
       return super.toString() + "_<Variable: " + name.lexeme + "(" + name.literal + ")>";
     }
+  }
+
+  static class Yield extends Expr {
+    Yield(Token keyword, Expr value) {
+      this.keyword = keyword;
+      this.value = value;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitYieldExpr(this); }
+
+    final Token keyword;
+    final Expr value;
   }
 
   abstract <R> R accept(Visitor<R> visitor);
