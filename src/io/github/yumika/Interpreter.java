@@ -1155,7 +1155,7 @@ public class Interpreter implements
     }
 
     if (object instanceof YmkCallable callable) {
-      if ("name".equals(expr.name.lexeme)) {
+      if ("__name__".equals(expr.name.lexeme)) {
         return callable.toString();
       }
     }

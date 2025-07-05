@@ -101,7 +101,7 @@ print "";
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
 print `: (hw.hello) is: ${typeof(hw.hello)} that returns ${typeof(hw.hello())}`;
-hw.hello.name |> print;
+hw.hello.__name__ |> print;
 " " |> puts;
 var hw_hello = hw.hello();
 str(hw_hello) + " " |> print;
