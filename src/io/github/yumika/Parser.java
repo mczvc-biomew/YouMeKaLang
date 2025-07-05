@@ -32,7 +32,7 @@ class Parser {
 
   private Stmt declaration() {
     try {
-      if (match(CLASS)) return classDeclaration();
+      if (match(ABSTRACT) || match(CLASS)) return classDeclaration();
 
       if (match(INTERFACE)) return interfaceDeclaration();
 
@@ -50,6 +50,9 @@ class Parser {
   }
 
   private Stmt classDeclaration() {
+    boolean isAbstract = previous().lexeme.equals("abstract");
+    if (isAbstract) consume(CLASS, "expect abstract class.");
+
     Token name = consume(IDENTIFIER, "Expect class name.");
 
     Expr.Variable superclass = null;
@@ -75,7 +78,7 @@ class Parser {
 
     consume(RIGHT_BRACE, "Expect '}' after class body.");
 
-    return new Stmt.Class(name, superclass, interfaces, methods);
+    return new Stmt.Class(name, superclass, interfaces, methods, isAbstract);
   }
 
   private Stmt statement() {
