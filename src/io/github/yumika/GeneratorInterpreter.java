@@ -250,6 +250,11 @@ public class GeneratorInterpreter {
     }
 
     @Override
+    public Object visitPipelineExpr(Expr.Pipeline expr) {
+      return null;
+    }
+
+    @Override
     public Object visitPostfixExpr(Expr.Postfix expr) {
       return null;
     }
