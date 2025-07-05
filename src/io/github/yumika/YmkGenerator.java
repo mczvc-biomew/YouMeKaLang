@@ -296,6 +296,11 @@ public class YmkGenerator implements YmkCallable {
     }
 
     @Override
+    public Void visitPipelineExpr(Expr.Pipeline expr) {
+      return null;
+    }
+
+    @Override
     public Void visitPostfixExpr(Expr.Postfix expr) {
       return null;
     }
