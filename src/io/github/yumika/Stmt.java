@@ -10,6 +10,8 @@ abstract class Stmt {
     R visitClassStmt(Class stmt);
     R visitDestructuringVarStmt(DestructuringVarStmt stmt);
     R visitExpressionStmt(Expression stmt);
+    R visitForStmt(For stmt);
+    R visitForEachStmt(ForEach stmt);
     R visitFunctionStmt(Function stmt);
     R visitIfStmt(If stmt);
     R visitImportStmt(Import stmt);
@@ -23,6 +25,8 @@ abstract class Stmt {
     R visitVarStmt(Var stmt);
     R visitWhileStmt(While stmt);
   }
+  public static class Break extends RuntimeException {}
+  public static class Continue extends RuntimeException {}
 
   static class Block extends Stmt {
     Block(List<Stmt> statements) { this.statements = statements; }
@@ -111,6 +115,36 @@ abstract class Stmt {
     <R> R accept(Visitor<R> visitor) { return visitor.visitExpressionStmt(this); }
 
     final Expr expression;
+  }
+
+  static class For extends Stmt {
+    public For(Stmt initializer, Expr condition, Expr increment, Stmt body) {
+      this.initializer = initializer;
+      this.condition = condition;
+      this.increment = increment;
+      this.body = body;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitForStmt(this); }
+
+    final Stmt initializer;
+    final Expr condition;
+    final Expr increment;
+    final Stmt body;
+  }
+
+  static class ForEach extends Stmt {
+    ForEach(Token variable, Expr iterable, Stmt body) {
+      this.variable = variable;
+      this.iterable = iterable;
+      this.body = body;
+    }
+
+    <R> R accept(Visitor<R> visitor) { return visitor.visitForEachStmt(this); }
+
+    final Token variable;
+    final Expr iterable;
+    final Stmt body;
   }
 
   static class Function extends Stmt {
