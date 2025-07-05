@@ -139,6 +139,51 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitForEachStmt(Stmt.ForEach stmt) {
+    beginScope(); // Create a new local scope for the loop variable
+
+    // Declare and define the loop variable
+    declare(stmt.variable);
+    define(stmt.variable);
+
+    // Resolve the iterable expression
+    resolve(stmt.iterable);
+
+    // Resolve the loop body
+    resolve(stmt.body);
+
+    endScope(); // End the for-loop scope
+    return null;
+  }
+
+  @Override
+  public Void visitForStmt(Stmt.For stmt) {
+    beginScope();
+
+    // Resolve initializer (e.g., var i = 0)
+    if (stmt.initializer != null) {
+      resolve(stmt.initializer);
+    }
+
+    // Resolve condition (e.g., i < 10)
+    if (stmt.condition != null) {
+      resolve(stmt.condition);
+    }
+
+    // Resolve increment (e.g., i += 1)
+    if (stmt.increment != null) {
+      resolve(stmt.increment);
+    }
+
+    // Resolve loop body
+    resolve(stmt.body);
+
+    endScope();
+    return null;
+  }
+
+
+  @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
     FunctionType declaration = interpreter.isGeneratorFunction(stmt) ? FunctionType.GENERATOR : FunctionType.FUNCTION;
     declare(stmt.name);
