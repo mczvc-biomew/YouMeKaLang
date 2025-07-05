@@ -53,7 +53,7 @@ public class YmkGenerator implements YmkCallable {
         return makeResult(val, false);
       } catch (GeneratorInterpreter.GeneratorComplete e) {
         isDone = true;
-        return makeResult(null, true);
+        return makeResult(YmkUndefined.INSTANCE, true);
       }
     }
 
