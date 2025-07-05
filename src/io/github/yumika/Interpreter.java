@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 public class Interpreter implements
     Expr.Visitor<Object>,
@@ -1088,9 +1089,11 @@ public class Interpreter implements
 
     Object object = evaluate(expr.object);
 
+    // Support primitive meta-access
     if ("__class__".equals(expr.name.lexeme)) {
       return getTypeName(object);
     }
+    // Support for Java interop
     if (object instanceof JavaPackage) {
       return ((JavaPackage) object).get(expr.name.lexeme);
     }
@@ -1101,19 +1104,59 @@ public class Interpreter implements
       return ((JavaInstanceWrapper) object).get(expr.name.lexeme);
     }
 
-
+    // Support for user-defined instances
     if (object instanceof YmkInstance) {
       return ((YmkInstance) object).get(expr.name, this);
     }
-
+    // Support for hash map-style object access
     if (object instanceof Map) {
       Object getValue = ((Map<String, Object>)object).get(expr.name.lexeme);
       return  getValue;
     }
-
+    // Generator method access: gen.next
     if (object instanceof YmkGenerator.BoundGenerator bound) {
       if ("next".equals(expr.name.lexeme)) {
         return new YmkNativeFunction("next", 0, (interpreter, args) -> bound.next());
+      }
+    }
+
+    // Support for strings, numbers, etc.
+    if (object instanceof String str) {
+      switch (expr.name.lexeme) {
+
+        case "length":
+          return str.length();
+        case "upper":
+          return new YmkNativeFunction("upper", 0,
+              (interpreter, args) -> str.toUpperCase());
+        case "lower":
+          return new YmkNativeFunction("lower", 0, (interpreter, args) -> str.toLowerCase());
+
+        case "strip":
+        case "trim":
+          return new YmkNativeFunction("trim", 0, (interpreter, args) -> str.trim());
+        case "split":
+          return new YmkNativeFunction("split", 1, (interpreter, args) -> {
+            String delimiter = args.get(0).toString();
+            return Arrays.asList(str.split(Pattern.quote(delimiter)));
+          });
+        case "contains":
+          return new YmkNativeFunction("contains", 1, (interpreter, args) -> {
+            return str.contains(args.get(0).toString());
+          });
+        default: break;
+      }
+    }
+
+    if (object instanceof Number num) {
+      if ("__class__".equals(expr.name.lexeme)) {
+        return getTypeName(num);
+      }
+    }
+
+    if (object instanceof YmkCallable callable) {
+      if ("name".equals(expr.name.lexeme)) {
+        return callable.toString();
       }
     }
 
@@ -1353,6 +1396,18 @@ public class Interpreter implements
       return YmkUndefined.INSTANCE;
     }
     return getProperty(object, expr.name);
+  }
+
+  @Override
+  public Object visitPipelineExpr(Expr.Pipeline expr) {
+    Object value = evaluate(expr.left);
+    Object fun = evaluate(expr.right);
+
+    if (!(fun instanceof YmkCallable)) {
+      throw new RuntimeError(null, "`|>` expects a callable on the right side.");
+    }
+
+    return ((YmkCallable) fun).call(this, List.of(value), Map.of());
   }
 
   @Override
