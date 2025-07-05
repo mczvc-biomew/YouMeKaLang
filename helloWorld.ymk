@@ -77,7 +77,10 @@ print "";
 
 import modules.helloWorld as hw;
 
-print "Start";
+fun toUpper(s) { return s.upper(); }
+
+var message = "Start";
+message |> toUpper |> print;
 //setTimeout(|| { print "Hi after 1s"; }, 1000);
 //var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
 
