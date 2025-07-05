@@ -735,7 +735,12 @@ class Parser {
       Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "print", null, peek().line);
       advance(); // consume 'print'
       return new Expr.Variable(fakeIdentifier);
-//      return new Expr.Variable(consume(PRINT, null));
+    }
+
+    if (check(PUTS) && isInExpressionContext()) {
+      Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "puts", null, peek().line);
+      advance(); // consume 'puts'
+      return new Expr.Variable(fakeIdentifier);
     }
 
     if (match(LEFT_PAREN)) {
