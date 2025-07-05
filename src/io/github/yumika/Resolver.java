@@ -481,6 +481,13 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
   }
 
   @Override
+  public Void visitPipelineExpr(Expr.Pipeline expr) {
+    resolve(expr.left);
+    resolve(expr.right);
+    return null;
+  }
+
+  @Override
   public Void visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     List<Expr.ObjectLiteral.Property> props = ((Expr.ObjectLiteral)expr).properties;
     if (props == null) return null;
