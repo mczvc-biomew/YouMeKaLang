@@ -24,5 +24,8 @@ class CompleteGreeter > Greeter {
     }
 }
 
+abstract class Roblox {}
+var game = Roblox();
+
 var cg = CompleteGreeter();
 cg.greet("Hello World [test]", "test1", "test2", test123: "test");
