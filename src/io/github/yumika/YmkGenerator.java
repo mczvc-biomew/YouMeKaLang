@@ -83,6 +83,16 @@ public class YmkGenerator implements YmkCallable {
     }
 
     @Override
+    public Void visitForStmt(Stmt.For stmt) {
+      return null;
+    }
+
+    @Override
+    public Void visitForEachStmt(Stmt.ForEach stmt) {
+      return null;
+    }
+
+    @Override
     public Void visitVarStmt(Stmt.Var stmt) {
       if (stmt.initializer != null) {
         stmt.initializer.accept(this);
