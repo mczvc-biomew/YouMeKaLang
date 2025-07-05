@@ -17,9 +17,14 @@ public class Builtins {
     builtins.set("print", new YmkNativeFunction("print", 1, (_interpreter, args) -> {
       System.out.println(CUtils.stringify(args.get(0), 0));
       return null;
-    }) {
-
-    }, interpreter);
+    }), interpreter);
+    builtins.set("puts", new YmkNativeFunction("puts", 1, (_interpreter, args) -> {
+      System.out.print(CUtils.stringify(args.get(0), 0));
+      return null;
+    }), interpreter);
+    builtins.set("str", new YmkNativeFunction("str", 1, (_interpreter, args) -> {
+      return CUtils.stringify(args.get(0), 0);
+    }), interpreter);
     builtins.set("env", new YmkCallable() {
       @Override
       public int arity() {
