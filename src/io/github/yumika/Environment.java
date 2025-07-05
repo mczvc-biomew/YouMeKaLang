@@ -63,7 +63,7 @@ class Environment {
       return;
     }
 
-    throw new RuntimeError(name,
+    throw new RuntimeError.UndefinedException(name,
         "Undefined variable '" + name.lexeme + "'.");
   }
 
