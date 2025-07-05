@@ -1036,13 +1036,6 @@ public class Interpreter implements
       return  getValue;
     }
 
-    if (object instanceof YmkGenerator generator) {
-      String prop = expr.name.lexeme;
-      if ("next".equals(prop)) {
-        return new YmkNativeFunction("next", 0, (interpreter, args) -> generator.next());
-      }
-    }
-
     if (object instanceof YmkGenerator.BoundGenerator bound) {
       if ("next".equals(expr.name.lexeme)) {
         return new YmkNativeFunction("next", 0, (interpreter, args) -> bound.next());
@@ -1566,7 +1559,7 @@ public class Interpreter implements
       for (Stmt stmt : function.body) {
         stmt.accept(detector);
       }
-    } catch(YmkGenerator.GeneratorDetectedException e) {
+    } catch (YmkGenerator.GeneratorDetectedException e) {
       return true;
     }
     return false;
