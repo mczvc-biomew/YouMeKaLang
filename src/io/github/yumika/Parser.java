@@ -27,7 +27,19 @@ class Parser {
   }
 
   private Expr expression() {
-    return matchExpr();
+    return pipeline();
+  }
+
+  private Expr pipeline() {
+    Expr expr =  matchExpr();
+
+    while(match(PIPE_GREATER)) {
+      Token operator = previous();
+      Expr right = matchExpr();
+      expr = new Expr.Pipeline(expr, right);
+    }
+
+    return expr;
   }
 
   private Stmt declaration() {
@@ -719,6 +731,13 @@ class Parser {
       return new Expr.Variable(previous());
     }
 
+    if (check(PRINT) && isInExpressionContext()) {
+      Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "print", null, peek().line);
+      advance(); // consume 'print'
+      return new Expr.Variable(fakeIdentifier);
+//      return new Expr.Variable(consume(PRINT, null));
+    }
+
     if (match(LEFT_PAREN)) {
       Expr expr = expression();
       consume(RIGHT_PAREN, "Expect ')' after expression.");
@@ -750,6 +769,10 @@ class Parser {
     }
 
     throw error(peek(), "Expect expression.");
+  }
+
+  private boolean isInExpressionContext() {
+    return true;
   }
 
   private Expr caseExpression() {
