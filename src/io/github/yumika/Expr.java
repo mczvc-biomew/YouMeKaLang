@@ -27,6 +27,7 @@ abstract class Expr {
     R visitNullCoalesceExpr(NullCoalesce expr);
     R visitObjectLiteralExpr(ObjectLiteral expr);
     R visitOptionalGetExpr(OptionalGet expr);
+    R visitPipelineExpr(Pipeline expr);
     R visitPostfixExpr(Postfix expr);
     R visitPrefixExpr(Prefix expr);
     R visitSetExpr(Set expr);
@@ -425,6 +426,18 @@ abstract class Expr {
 
     final Expr object;
     final Token name;
+  }
+
+  static class Pipeline extends Expr {
+    Pipeline(Expr left, Expr right) {
+      this.left = left;
+      this.right = right;
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) { return visitor.visitPipelineExpr(this); }
+    final Expr left;
+    final Expr right;
   }
 
   static class Postfix extends Expr {
