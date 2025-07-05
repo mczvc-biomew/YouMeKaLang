@@ -1,3 +1,24 @@
+fun countTo(n) {
+  var i = 0;
+  while (i < n) {
+    yield i;
+    i = i + 1;
+  }
+}
+
+var g = countTo(10);
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+print g.next();
+
 try {
   var x = 1 / 0;
   print x;
@@ -314,6 +335,7 @@ var nothing = null;
 print nothing?.name ?? "Guest";
 
 print "";
+
 
 
 print "# Comparison";
