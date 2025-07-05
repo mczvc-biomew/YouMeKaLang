@@ -62,7 +62,9 @@ abstract class Stmt {
     Class(Token name,
           Expr.Variable superclass,
           List<Token> interfaces,
-          Map<String, Function> methods) {
+          Map<String, Function> methods,
+          boolean isAbstract) {
+      this.isAbstract = isAbstract;
       this.name = name;
       this.interfaces = interfaces;
       this.superclass = superclass;
@@ -72,6 +74,7 @@ abstract class Stmt {
     @Override
     <R> R accept(Visitor<R> visitor) { return visitor.visitClassStmt(this); }
 
+    final boolean isAbstract;
     final Token name;
     final Expr.Variable superclass;
     final List<Token> interfaces;
