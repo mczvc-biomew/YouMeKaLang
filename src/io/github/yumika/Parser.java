@@ -139,10 +139,58 @@ class Parser {
     if (match(SEMICOLON)) {
       initializer = null;
     } else if (match(VAR)) {
-      initializer = varDeclaration();
+      if (match(TokenType.LEFT_BRACE)) {
+        return destructuringVarStmt();
+      }
+
+      Token name = consume(IDENTIFIER, "Expect loop variable name.");
+
+      if (match(IN)) {
+        Expr iterable = expression();
+        consume(RIGHT_PAREN, "Expect ')' after iterable.");
+        Stmt body = statement();
+        return new Stmt.ForEach(name, iterable, body);
+      }
+
+      Token typeAnnotation = null;
+      if (match(COLON)) {
+        typeAnnotation = consume(IDENTIFIER, "Expect type name after ':'.");
+      }
+
+      Expr initializerExpr = null;
+      if (match(EQUAL)) {
+        initializerExpr = expression();
+      }
+
+      consume(SEMICOLON, "Expect ';' after variable declaration.");
+
+      initializer = new Stmt.Var(name, typeAnnotation, initializerExpr);
+      return finishClassicForLoop(initializer);
     } else {
       initializer = expressionStatement();
     }
+//        Stmt initializer = new Stmt.Var(name, null, null);
+//    if (match(SEMICOLON)) {
+//      initializer = null;
+//    } else if (match(VAR)) {
+//      initializer = varDeclaration();
+//    } else {
+//      initializer = expressionStatement();
+//    }
+
+    return finishClassicForLoop(initializer);
+  }
+
+  private Stmt destructuringVarStmt() {
+    // object destructuring: var {a, b, c = "default"} = expr;
+    List<Stmt.DestructuringVarStmt.DestructuringField> fields = parseDestructuringPattern();
+    consume(TokenType.EQUAL, "Expect '=' after destructuring pattern.");
+    Expr initializer = expression();
+    consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+    return new Stmt.DestructuringVarStmt(fields, initializer);
+  }
+
+  private Stmt finishClassicForLoop(Stmt initializer) {
 
     Expr condition = null;
     if (!check(SEMICOLON)) {
@@ -289,16 +337,7 @@ class Parser {
     return parsePattern();
   }
 
-  private Stmt varDeclaration() {
-    if (match(TokenType.LEFT_BRACE)) {
-      // object destructuring: var {a, b, c = "default"} = expr;
-      List<Stmt.DestructuringVarStmt.DestructuringField> fields = parseDestructuringPattern();
-      consume(TokenType.EQUAL, "Expect '=' after destructuring pattern.");
-      Expr initializer = expression();
-      consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
-      return new Stmt.DestructuringVarStmt(fields, initializer);
-    }
-
+  private Stmt variableDeclaration() {
     Token name = consume(IDENTIFIER, "Expect variable name.");
 
     Token typeAnnotation = null;
@@ -314,6 +353,19 @@ class Parser {
     consume(SEMICOLON, "Expect ';' after variable declaration.");
 
     return new Stmt.Var(name, typeAnnotation, initializer);
+  }
+
+  private Stmt varDeclaration() {
+    if (match(TokenType.LEFT_BRACE)) {
+      // object destructuring: var {a, b, c = "default"} = expr;
+      List<Stmt.DestructuringVarStmt.DestructuringField> fields = parseDestructuringPattern();
+      consume(TokenType.EQUAL, "Expect '=' after destructuring pattern.");
+      Expr initializer = expression();
+      consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+      return new Stmt.DestructuringVarStmt(fields, initializer);
+    }
+
+    return variableDeclaration();
   }
 
   private List<Stmt.DestructuringVarStmt.DestructuringField> parseDestructuringPattern() {
