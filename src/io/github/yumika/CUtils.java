@@ -30,7 +30,7 @@ public class CUtils {
     StringBuilder sb = new StringBuilder();
     boolean notEmpty = false;
 
-    if (list.isEmpty()) return "\n\n" + list.toString() + "\n\n";
+    if (list.isEmpty()) return "[empty list]";
     var first = list.get(0);
     int matchCount = 0;
     for (Object item : list) {
@@ -92,6 +92,12 @@ public class CUtils {
   static String stringify(Object object, int depth) {
     if (object == null) return "null";
 
+    if (object instanceof Stmt.Interface stmtObj) {
+      return stmtObj.name.lexeme + " Interface";
+    } else if (object instanceof YmkClass klass) {
+      return klass.name + " Class";
+    }
+
     if (object instanceof Double) {
       String text = object.toString();
       if (text.endsWith(".0")) {
@@ -125,6 +131,10 @@ public class CUtils {
 
     } else if (object instanceof YmkInstance inst) {
       StringBuilder pairBuilder = new StringBuilder();
+      if (inst.getFields().size() == 0) {
+        pairBuilder.append(inst.getKlass().name).append(" instance");
+        return pairBuilder.toString();
+      }
       boolean removeTrailingComma = false;
       pairBuilder.append("{");
       for ( Map.Entry<?, ?> entry : inst.getFields().entrySet() ) {
