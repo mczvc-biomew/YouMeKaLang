@@ -72,6 +72,16 @@ public class GeneratorInterpreter {
     }
 
     @Override
+    public Void visitForStmt(Stmt.For stmt) {
+      return null;
+    }
+
+    @Override
+    public Void visitForEachStmt(Stmt.ForEach stmt) {
+      return null;
+    }
+
+    @Override
     public Void visitIfStmt(Stmt.If stmt) {
       Object condition = evaluate(stmt.condition);
       if (isTruthy(condition)) {
