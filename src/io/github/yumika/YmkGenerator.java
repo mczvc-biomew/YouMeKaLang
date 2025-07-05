@@ -10,7 +10,6 @@ public class YmkGenerator implements YmkCallable {
   private final Environment closure;
   private final Stmt.Function declaration;
   private final GeneratorInterpreter interpreter;
-  private boolean isDone = false;
 
   public YmkGenerator(Stmt.Function declaration, Environment closure) {
     this.declaration = declaration;
@@ -19,38 +18,16 @@ public class YmkGenerator implements YmkCallable {
     this.interpreter = new GeneratorInterpreter(declaration, closure);
   }
 
-  public Object next() {
-    if (isDone) return makeResult(null, true);
-//    return interpreter.resume();
-    try {
-      Object value = interpreter.resume();
-      return makeResult(value, false);
-    } catch (GeneratorInterpreter.GeneratorComplete complete) {
-      isDone = true;
-      return makeResult(null, true);
-    }
-  }
-
   @Override
   public Object call(Interpreter interpreter, List<Object> arguments, Map<String, Object> kwargs) {
     Environment generatorEnv = new Environment(closure);
     for (int i = 0; i < declaration.params.size(); i++) {
       Token param = declaration.params.get(i);
       Object value = i < arguments.size() ? arguments.get(i) : null;
-//      this.closure.define(param.lexeme, value);
       generatorEnv.define(param.lexeme, value);
     }
     GeneratorFrame frame = new GeneratorFrame(declaration, generatorEnv);
-//    GeneratorInterpreter gen = new GeneratorInterpreter(declaration, closure);
     return new BoundGenerator(frame);
-//    return this;
-  }
-
-  private Map<String, Object> makeResult(Object value, boolean done) {
-    Map<String, Object> result = new HashMap<>();
-    result.put("value", value);
-    result.put("done", done);
-    return result;
   }
 
   @Override
@@ -127,6 +104,19 @@ public class YmkGenerator implements YmkCallable {
       return null;
     }
 
+    @Override
+    public Void visitWhileStmt(Stmt.While stmt) {
+      stmt.condition.accept(this);
+      stmt.body.accept(this);
+      return null;
+    }
+
+    @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+      if (stmt.value != null) stmt.value.accept(this);
+      return null;
+    }
+
     // TODO: Start here;
 
     @Override
@@ -146,19 +136,6 @@ public class YmkGenerator implements YmkCallable {
 
     @Override
     public Void visitPutsStmt(Stmt.Puts stmt) {
-      return null;
-    }
-
-    @Override
-    public Void visitWhileStmt(Stmt.While stmt) {
-      stmt.condition.accept(this);
-      stmt.body.accept(this);
-      return null;
-    }
-
-    @Override
-    public Void visitReturnStmt(Stmt.Return stmt) {
-      if (stmt.value != null) stmt.value.accept(this);
       return null;
     }
 
