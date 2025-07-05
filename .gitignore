@@ -20,3 +20,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# Lib
+lib
