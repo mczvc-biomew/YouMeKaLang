@@ -8,7 +8,7 @@ public class Builtins {
 
   static YmkInstance loadBuiltins(Interpreter interpreter) {
     Map<String, YmkFunction> methods = new HashMap<>();
-    YmkInstance builtins = new YmkInstance(new YmkClass("__builtins__", null, methods)) {
+    YmkInstance builtins = new YmkInstance(new YmkClass("__builtins__", null, methods, false)) {
       @Override
       public String toString() {
         return "__builtins__";
