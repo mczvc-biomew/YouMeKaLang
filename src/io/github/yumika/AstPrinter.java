@@ -64,6 +64,16 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   public String visitExpressionStmt(Stmt.Expression stmt) { return parenthesize(";", stmt.expression) ; }
 
   @Override
+  public String visitForStmt(Stmt.For stmt) {
+    return parenthesize2("for ", stmt.initializer, stmt.condition, stmt.increment, stmt.body);
+  }
+
+  @Override
+  public String visitForEachStmt(Stmt.ForEach stmt) {
+    return parenthesize2("for-each", stmt.variable, stmt.iterable, stmt.body);
+  }
+
+  @Override
   public String visitFunctionStmt(Stmt.Function stmt) {
     StringBuilder builder = new StringBuilder();
     builder.append("(fun " + stmt.name.lexeme + "(");
