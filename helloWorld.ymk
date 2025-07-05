@@ -6,6 +6,9 @@ fun countTo(n) {
   }
 }
 
+for (var x in countTo(5)) {
+  print x;
+}
 var g = countTo(10);
 print g.next();
 print g.next();
