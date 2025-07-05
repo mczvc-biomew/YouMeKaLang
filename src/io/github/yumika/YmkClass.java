@@ -6,14 +6,27 @@ import java.util.Map;
 public class YmkClass implements YmkCallable {
   final String name;
   final YmkClass superclass;
+  final boolean isAbstract;
+  final Token keyword;
 
   private final Map<String, YmkFunction> methods;
 
   public YmkClass(String name, YmkClass superclass,
-                  Map<String, YmkFunction> methods) {
+                  Map<String, YmkFunction> methods, boolean isAbstract) {
     this.superclass = superclass;
     this.name = name;
     this.methods = methods;
+    this.isAbstract = isAbstract;
+    this.keyword = null;
+  }
+
+  public YmkClass(String name, Token keyword, YmkClass superclass,
+                  Map<String, YmkFunction> methods, boolean isAbstract) {
+    this.superclass = superclass;
+    this.name = name;
+    this.methods = methods;
+    this.isAbstract = isAbstract;
+    this.keyword = keyword;
   }
 
   YmkFunction findMethod(String name) {
@@ -35,6 +48,10 @@ public class YmkClass implements YmkCallable {
   public Object call(Interpreter interpreter,
                      List<Object> arguments,
                      Map<String, Object> kwargs) {
+    if (isAbstract) {
+      throw new RuntimeError(keyword, "Cannot instantiate abstract class "
+      + name);
+    }
     YmkInstance instance = new YmkInstance(this);
     YmkFunction initializer = findMethod("init");
     if (initializer != null) {
