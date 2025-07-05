@@ -45,6 +45,7 @@ class Scanner {
     keywords.put("var", VAR);
     keywords.put("when", WHEN);
     keywords.put("while", WHILE);
+    keywords.put("yield", YIELD);
   }
 
   private final String source;
