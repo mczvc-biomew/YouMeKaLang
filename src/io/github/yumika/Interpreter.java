@@ -402,6 +402,81 @@ public class Interpreter implements
   }
 
   @Override
+  public Void visitForStmt(Stmt.For stmt) {
+    // New scope for the for-loop
+    beginScope();
+
+
+    // Execute initializer
+    if (stmt.initializer != null) {
+      execute(stmt.initializer);
+    }
+
+    while (stmt.condition == null || isTruthy(evaluate(stmt.condition))) {
+      // Execute loop body
+      try {
+        execute(stmt.body);
+      } catch (Stmt.Break e) {
+        break;
+      } catch (Stmt.Continue e) {
+        // Fall through to increment
+      }
+
+      // Execute increment
+      if (stmt.increment != null) {
+        evaluate(stmt.increment);
+      }
+    }
+
+    endScope();
+    return null;
+  }
+
+
+  public Void visitForEachStmt(Stmt.ForEach stmt) {
+    Object iterable = evaluate(stmt.iterable);
+
+    YmkGenerator.BoundGenerator generator;
+
+    if (iterable instanceof YmkGenerator.BoundGenerator gen) {
+      generator = gen;
+    } else if (iterable instanceof YmkCallable callable) {
+      Object result = callable.call(this, List.of(), Map.of());
+      if (result instanceof YmkGenerator.BoundGenerator genResult) {
+        generator = genResult;
+      } else {
+        throw new RuntimeError(stmt.variable, "Callable did not return a generator.");
+      }
+    }// ❌ Not iterable
+    else {
+      throw new RuntimeError(stmt.variable, "Target in 'for' must be a generator or generator-producing function.");
+    }
+
+    while (true) {
+      Object result;
+      try {
+        result = generator.next();
+      } catch (GeneratorInterpreter.GeneratorComplete e) {
+        break;
+      }
+
+      if (!(result instanceof Map<?, ?> resMap)) break;
+
+      Object value = resMap.get("value");
+      boolean done = Boolean.TRUE.equals(resMap.get("done"));
+      if (done) break;
+
+      // Define or overwrite variable in current environment
+//      beginScope();
+      environment.define(stmt.variable.lexeme, value);
+      execute(stmt.body);
+//      endScope();
+    }
+
+    return null;
+  }
+
+  @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
     // Check if functon contains a 'yield', indicating it's a generator
     boolean isGenerator = isGeneratorFunction(stmt);
@@ -1400,6 +1475,15 @@ public class Interpreter implements
     // Resolving and Binding call-look-up-variable
     return lookUpVariable(expr.name, expr);
   }
+
+  private void beginScope() {
+    environment = new Environment(environment); // new local scope
+  }
+
+  private void endScope() {
+    environment = environment.enclosing; // pop back to outer
+  }
+
 
   @Override
   public Object visitYieldExpr(Expr.Yield expr) {
