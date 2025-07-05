@@ -2,7 +2,6 @@ fun hello() {
     var hi = "Hello";
     var welcome = "welcome";
     puts hi;
-    puts " ";
     return {
         world: " World!",
         greetings: || hi + this.world,
@@ -23,6 +22,9 @@ class CompleteGreeter > Greeter {
         print kwargs;
     }
 }
+
+abstract class Roblox {}
+var game = Roblox();
 
 var cg = CompleteGreeter();
 cg.greet("Hello World [test]", "test1", "test2", test123: "test");
