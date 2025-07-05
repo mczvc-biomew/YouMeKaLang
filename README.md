@@ -2,11 +2,11 @@
 
 ### [0.0.8]
 * unified variable assignment
-* Functions (Statement and Expression), named and anonymous, getters & setters;
+* Functions (Statement and Expression), named and anonymous, getters & setters, *new* Generators!;
   * Functional programming;
   * builtins (initial plan, ongoing)
 * Lambda function (syntax like Ruby; not function arrows)
-* Class (Object oriented programming)
+* Class, Abstract Class, Interface (Object oriented programming)
 * If, Case conditional expressions + (and, or, not binary operators)
 * Try / Catch error handling, (throw exceptions)!
 * Number, Boolean, String (Template, interpolation), Array, Object Literals
