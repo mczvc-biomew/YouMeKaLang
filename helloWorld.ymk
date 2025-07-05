@@ -80,6 +80,7 @@ import modules.helloWorld as hw;
 fun toUpper(s) { return s.upper(); }
 
 var message = "Start";
+"Ready: " |> puts;
 message |> toUpper |> print;
 //setTimeout(|| { print "Hi after 1s"; }, 1000);
 //var id = setInterval(|count| { print `tick${"." * (4 - count)}`; }, 500);
@@ -100,7 +101,10 @@ print "";
 print hw.hello()["greetings2"]() + ".";
 print hw.hello()["greetings3"]();
 print `: (hw.hello) is: ${typeof(hw.hello)} that returns ${typeof(hw.hello())}`;
-print hw.hello();
+hw.hello.name |> print;
+" " |> puts;
+var hw_hello = hw.hello();
+str(hw_hello) + " " |> print;
 print "";
 
 

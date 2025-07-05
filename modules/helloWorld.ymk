@@ -5,7 +5,7 @@ fun hello() {
     return {
         world: " World!",
         greetings: || hi + this.world,
-        greetings2: || "Hello! Greetings and " + welcome,
+        greetings2: || " Hello! Greetings and " + welcome,
         greetings3: || this.greetings2() + "!"
     };
 }
