@@ -255,6 +255,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   }
 
   @Override
+  public String visitPipelineExpr(Expr.Pipeline expr) {
+    return parenthesize2("pipeline", expr.left, ", fun:", expr.right);
+  }
+
+  @Override
   public String visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
     return parenthesize2("{:}", expr.properties);
   }
