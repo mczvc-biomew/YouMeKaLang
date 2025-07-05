@@ -1,12 +1,13 @@
 fun countTo(n) {
   var i = 0;
   while (i < n) {
-    yield i;
+    if (i < 5)
+      yield i;
     i = i + 1;
   }
 }
 
-for (var x in countTo(5)) {
+for (var x in countTo(8)) {
   print x;
 }
 var g = countTo(10);
