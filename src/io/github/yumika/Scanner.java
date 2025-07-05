@@ -87,7 +87,9 @@ class Scanner {
         }
         break;
       case '%': addToken(PERCENT); break;
-      case '|': addToken(PIPE); break;
+      case '|':
+        addToken(match('>') ? PIPE_GREATER : PIPE);
+        break;
       case ':': addToken(COLON); break;
       case ';': addToken(SEMICOLON); break;
       case '*':
