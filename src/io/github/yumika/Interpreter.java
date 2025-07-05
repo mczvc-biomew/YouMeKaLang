@@ -2,7 +2,6 @@ package io.github.yumika;
 
 import io.github.yumika.javainterop.*;
 import io.github.yumika.modules.YmkMath;
-import io.github.yumika.CUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,9 +19,14 @@ public class Interpreter implements
     Stmt.Visitor<Void>
 {
   final Environment globals;
-  private Environment environment;
+  Environment environment;
 
   private final Map<Expr, Integer> locals = new HashMap<>();
+
+  private List<Stmt> pausedStatements = null;
+  private int pausedIndex = 0;
+  private boolean paused = false;
+
 
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2,
       runnable -> {
@@ -121,7 +125,7 @@ public class Interpreter implements
   private Object evaluate(Expr expr) { return expr.accept(this); }
 
   // Statements and State execute
-  private void execute(Stmt stmt) {
+  void execute(Stmt stmt) {
     stmt.accept(this);
   }
 
@@ -166,6 +170,8 @@ public class Interpreter implements
       setResult |= resolveLogical(setExpr.object, depth);
       setResult |= resolveLogical(setExpr.value, depth);
       return setResult;
+    } else if (expr instanceof Expr.Yield yieldExpr) {
+      return resolveLogical(yieldExpr.value, depth);
     }
 
     return false;
@@ -177,9 +183,22 @@ public class Interpreter implements
     try {
       this.environment = environment;
 
-      for (Stmt statement : statements) {
-        execute(statement);
+      int i = paused && statements == pausedStatements ? pausedIndex : 0;
+      for (; i < statements.size(); i++) {
+        try {
+          execute(statements.get(i));
+        } catch (GeneratorInterpreter.YieldException yield) {
+          pausedStatements = statements;
+          pausedIndex = i + 1;
+          paused = true;
+          throw yield;
+        }
       }
+
+      // Finished execution normally
+      paused = false;
+      pausedStatements = null;
+
     } finally {
       this.environment = previous;
     }
@@ -192,6 +211,28 @@ public class Interpreter implements
       return evaluate(expr);
     } finally {
       this.environment = previous;
+    }
+  }
+
+  public void resumeExecution() {
+    if (!paused || pausedStatements == null) return;
+
+    try {
+      for (int i = pausedIndex; i < pausedStatements.size(); i++) {
+        try {
+          execute(pausedStatements.get(i));
+        } catch (GeneratorInterpreter.YieldException yield) {
+          pausedIndex = i + 1;
+          paused = true;
+          throw yield;
+        }
+      }
+
+      // Done executing
+      paused = false;
+      pausedStatements = null;
+    } catch (GeneratorInterpreter.YieldException yield) {
+      throw yield;
     }
   }
 
@@ -236,7 +277,11 @@ public class Interpreter implements
 
   @Override
   public Void visitBlockStmt(Stmt.Block stmt) {
-    executeBlock(stmt.statements, new Environment(environment));
+    if (paused && pausedStatements == stmt.statements) {
+      executeBlock(stmt.statements, this.environment);
+    } else {
+      executeBlock(stmt.statements, new Environment(environment));
+    }
     return null;
   }
 
@@ -358,22 +403,30 @@ public class Interpreter implements
 
   @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
-    YmkFunction function = new YmkFunction(stmt, environment,
-        false);
-    Object decorated = function;
+    // Check if functon contains a 'yield', indicating it's a generator
+    boolean isGenerator = isGeneratorFunction(stmt);
+    YmkCallable callable;
+    if (isGenerator) {
+      callable = new YmkGenerator(stmt, environment);
+    } else {
+      YmkFunction function = new YmkFunction(stmt, environment,
+          false);
+      Object decorated = function;
 
-    for (int i = stmt.decorators.size() - 1; i >= 0; i--) {
-      resolveLogical(stmt.decorators.get(i), 0);
-      Object deco = evaluate(stmt.decorators.get(i));
+      for (int i = stmt.decorators.size() - 1; i >= 0; i--) {
+        resolveLogical(stmt.decorators.get(i), 0);
+        Object deco = evaluate(stmt.decorators.get(i));
 
-      if (!(deco instanceof YmkCallable)) {
-        throw new RuntimeError(null, "Decorator must be callable.");
+        if (!(deco instanceof YmkCallable)) {
+          throw new RuntimeError(null, "Decorator must be callable.");
+        }
+        decorated = ((YmkCallable) deco).call(this, List.of(decorated), Map.of());
       }
-      decorated = ((YmkCallable)deco).call(this, List.of(decorated), Map.of());
+      callable = (YmkCallable) decorated;
     }
 
     // Classes construct-function
-    environment.define(stmt.name.lexeme, decorated);
+    environment.define(stmt.name.lexeme, callable);
     return null;
   }
 
@@ -533,9 +586,9 @@ public class Interpreter implements
           throw new RuntimeError(stmt.name, "Type error: expected '" + stmt.type.lexeme + "'");
         }
       }
-
-      environment.define(stmt.name.lexeme, value);
     }
+    resolveLogical(stmt.initializer, 0);
+    environment.define(stmt.name.lexeme, value);
     return null;
   }
 
@@ -586,8 +639,16 @@ public class Interpreter implements
 
   @Override
   public Void visitWhileStmt(Stmt.While stmt) {
-    while (isTruthy(evaluate(stmt.condition))) {
-      execute(stmt.body);
+    try {
+      while (isTruthy(evaluate(stmt.condition))) {
+        try {
+          execute(stmt.body);
+        } catch (GeneratorInterpreter.YieldException yield) {
+          throw yield;
+        }
+      }
+    } catch (GeneratorInterpreter.YieldException yield) {
+      throw yield;
     }
 
     return null;
@@ -711,7 +772,11 @@ public class Interpreter implements
     if (distance != null) {
       environment.assignAt(distance, expr.name, value);
     } else {
-      globals.assign(expr.name, value);
+      try {
+        globals.assign(expr.name, value);
+      } catch (RuntimeError.UndefinedException e) {
+        environment.assign(expr.name, value);
+      }
     }
 
     return value;
@@ -969,6 +1034,19 @@ public class Interpreter implements
     if (object instanceof Map) {
       Object getValue = ((Map<String, Object>)object).get(expr.name.lexeme);
       return  getValue;
+    }
+
+    if (object instanceof YmkGenerator generator) {
+      String prop = expr.name.lexeme;
+      if ("next".equals(prop)) {
+        return new YmkNativeFunction("next", 0, (interpreter, args) -> generator.next());
+      }
+    }
+
+    if (object instanceof YmkGenerator.BoundGenerator bound) {
+      if ("next".equals(expr.name.lexeme)) {
+        return new YmkNativeFunction("next", 0, (interpreter, args) -> bound.next());
+      }
     }
 
     if (object == null) return null;
@@ -1330,6 +1408,16 @@ public class Interpreter implements
     return lookUpVariable(expr.name, expr);
   }
 
+  @Override
+  public Object visitYieldExpr(Expr.Yield expr) {
+    Object value = null;
+    if (expr.value != null) {
+      value = evaluate(expr.value);
+    }
+    resolveLogical(expr, 0);
+    throw new GeneratorInterpreter.YieldException(value);
+  }
+
   private Object evaluateWithEnv(Expr expr, Environment env) {
     Environment previous = this.environment;
     try {
@@ -1362,8 +1450,14 @@ public class Interpreter implements
           }
           throw new RuntimeError.UndefinedException(undefEx);
         } catch (RuntimeError.UndefinedException undefEx2) {
-          throw new RuntimeError.ReferenceError(name,
-              "Uncaught ReferenceError: " + name.lexeme + " is not defined");
+          Object value = YmkUndefined.INSTANCE;
+          try {
+            value = environment.get(name.lexeme);
+          } catch (RuntimeError.UndefinedException undefEx3) {
+            throw new RuntimeError.ReferenceError(name,
+                "Uncaught ReferenceError: " + name.lexeme + " is not defined");
+          }
+          return value;
         }
       }
     }
@@ -1462,6 +1556,18 @@ public class Interpreter implements
     for ( Object value : ((YmkInstance)globals.get("__types__")).getFields().values() ) {
       boolean ret = isTypeMatchAgainstDef(typeDef, value);
       if (ret) return true;
+    }
+    return false;
+  }
+
+  boolean isGeneratorFunction(Stmt.Function function) {
+    YmkGenerator.GeneratorDetector detector = new YmkGenerator.GeneratorDetector();
+    try {
+      for (Stmt stmt : function.body) {
+        stmt.accept(detector);
+      }
+    } catch(YmkGenerator.GeneratorDetectedException e) {
+      return true;
     }
     return false;
   }
