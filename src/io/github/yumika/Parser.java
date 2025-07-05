@@ -684,6 +684,7 @@ class Parser {
       }
       return listLiteral();
     }
+
     if (match(LEFT_BRACE)) {
       if (match(RIGHT_BRACE)) {
         return new Expr.ObjectLiteral(null);
@@ -695,6 +696,10 @@ class Parser {
 
     if (check(PIPE)) {
       return lambda();
+    }
+
+    if (match(YIELD)) {
+      return yieldExpression();
     }
 
     throw error(peek(), "Expect expression.");
@@ -1095,6 +1100,15 @@ class Parser {
 
     Parser subParser = new Parser(innerTokens);
     return subParser.expression();
+  }
+
+  private Expr yieldExpression() {
+    Token keyword = previous();
+    Expr value = null;
+    if (!check(SEMICOLON)) {
+      value = expression();
+    }
+    return new Expr.Yield(keyword, value);
   }
 
   private boolean match(TokenType... types) {
