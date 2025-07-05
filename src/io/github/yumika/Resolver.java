@@ -20,7 +20,8 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     // function-type-initializer
     INITIALIZER,
     METHOD,
-    LAMBDA
+    LAMBDA,
+    GENERATOR
   }
 
   private enum ClassType {
@@ -139,11 +140,12 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
 
   @Override
   public Void visitFunctionStmt(Stmt.Function stmt) {
+    FunctionType declaration = interpreter.isGeneratorFunction(stmt) ? FunctionType.GENERATOR : FunctionType.FUNCTION;
     declare(stmt.name);
     define(stmt.name);
 
     // pass-function-type
-    resolveFunction(stmt, FunctionType.FUNCTION);
+    resolveFunction(stmt, declaration);
     return null;
   }
 
@@ -513,6 +515,15 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     }
 
     resolveLocal(expr, expr.name);
+    return null;
+  }
+
+  @Override
+  public Void visitYieldExpr(Expr.Yield expr) {
+    if (currentFunction != FunctionType.GENERATOR) {
+      YouMeKa.error(expr.keyword, "Can't yield outside a generator function.");
+    }
+    resolve(expr.value);
     return null;
   }
 
