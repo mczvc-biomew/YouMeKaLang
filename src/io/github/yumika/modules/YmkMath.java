@@ -15,7 +15,7 @@ public class YmkMath extends YmkInstance {
 
   private static YmkClass buildMathClass(Interpreter interpreter) {
     Map<String, YmkFunction> methods = new HashMap<>();
-    return new YmkClass("Math", null, methods);
+    return new YmkClass("Math", null, methods, false);
   }
 
   private static double toDouble(List<Object> args, int index) {
