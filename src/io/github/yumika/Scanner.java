@@ -12,6 +12,7 @@ class Scanner {
 
   static {
     keywords = new HashMap<>();
+    keywords.put("abstract", ABSTRACT);
     keywords.put("and", AND);
     keywords.put("as", AS);
     keywords.put("case", CASE);
