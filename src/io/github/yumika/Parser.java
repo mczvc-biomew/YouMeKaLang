@@ -169,14 +169,6 @@ class Parser {
     } else {
       initializer = expressionStatement();
     }
-//        Stmt initializer = new Stmt.Var(name, null, null);
-//    if (match(SEMICOLON)) {
-//      initializer = null;
-//    } else if (match(VAR)) {
-//      initializer = varDeclaration();
-//    } else {
-//      initializer = expressionStatement();
-//    }
 
     return finishClassicForLoop(initializer);
   }
