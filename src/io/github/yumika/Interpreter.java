@@ -56,7 +56,7 @@ public class Interpreter implements
 
   void initGlobalDefinitions(Environment globalEnv) {
     globalEnv.define("undefined", YmkUndefined.INSTANCE);
-    globalEnv.define("__types__", new YmkInstance(new YmkClass("__types__", null, null)));
+    globalEnv.define("__types__", new YmkInstance(new YmkClass("__types__", null, null, false)));
     globalEnv.define("__builtins__", Builtins.loadBuiltins(this));
   }
 
@@ -350,8 +350,8 @@ public class Interpreter implements
       methods.put(method.getValue().name.lexeme, function);
     }
 
-    YmkClass klass = new YmkClass(stmt.name.lexeme,
-        (YmkClass)superclass, methods);
+    YmkClass klass = new YmkClass(stmt.name.lexeme, stmt.name,
+        (YmkClass)superclass, methods, stmt.isAbstract);
 
     if (superclass != null) {
       environment = environment.enclosing;
@@ -484,7 +484,7 @@ public class Interpreter implements
       moduleInterpreter.interpret(Collections.singletonList(s));
     }
 
-    YmkClass moduleKlass = new YmkClass("Module", null, new HashMap<>());
+    YmkClass moduleKlass = new YmkClass("Module", null, new HashMap<>(), true);
     YmkInstance namespace = new YmkInstance(moduleKlass);
     moduleEnv.forEach((k, v) -> namespace.set(k, v, this));
     environment.define(aliasName, namespace);
@@ -1229,7 +1229,7 @@ public class Interpreter implements
 
   @Override
   public Object visitObjectLiteralExpr(Expr.ObjectLiteral expr) {
-    YmkClass objectLiteralKlass = new YmkClass("Object", null, new HashMap<>());
+    YmkClass objectLiteralKlass = new YmkClass("Object", null, new HashMap<>(), false);
     YmkInstance self = new YmkInstance(objectLiteralKlass);
 
     if (expr.properties == null) return self;
