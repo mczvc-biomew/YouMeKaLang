@@ -325,6 +325,12 @@ public class YmkGenerator implements YmkCallable {
       return null;
     }
 
+    // @TODO: refactor this GeneratorDetector
+    @Override
+    public Void visitTemplateLiteralExpr(Expr.TemplateLiteral expr) {
+      return null;
+    }
+
     @Override
     public Void visitThisExpr(Expr.This expr) {
       return null;
