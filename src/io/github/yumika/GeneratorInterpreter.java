@@ -279,6 +279,12 @@ public class GeneratorInterpreter {
       return null;
     }
 
+    // @TODO: refactor this GeneratorExecutor
+    @Override
+    public Object visitTemplateLiteralExpr(Expr.TemplateLiteral expr) {
+      return null;
+    }
+
     @Override
     public Object visitThisExpr(Expr.This expr) {
       return null;
