@@ -33,6 +33,7 @@ abstract class Expr {
     R visitSetExpr(Set expr);
     R visitSpreadExpr(Spread expr);
     R visitSuperExpr(Super expr);
+    R visitTemplateLiteralExpr(TemplateLiteral expr);
     R visitThisExpr(This expr);
     R visitUnaryExpr(Unary expr);
     R visitUndefinedExpr(Undefined expr);
@@ -265,6 +266,48 @@ abstract class Expr {
     <R> R accept(Visitor<R> visitor) { return visitor.visitInterpolatedStringExpr(this); }
     final List<Expr> parts;
   }
+
+  // @TODO: refactor InterpolatedString
+  static class TemplateLiteral extends Expr {
+
+    TemplateLiteral(List<Part> parts) {
+      this.parts = parts;
+    }
+
+    static interface Part {}
+
+    static class Text implements Part {
+      final String value;
+      Text(String value) {
+        this.value = value;
+      }
+
+      @Override
+      public String toString() {
+        return value;
+      }
+    }
+
+    static class Expression implements Part {
+      final Expr expression;
+      Expression(Expr expression) {
+        this.expression = expression;
+      }
+
+      @Override
+      public String toString() {
+        return "${" + expression + "}";
+      }
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitTemplateLiteralExpr(this);
+    }
+
+    final List<Part> parts;
+  }
+
 
   static class Lambda extends Expr {
     Lambda(List<Token> params, List<Token> paramTypes, Token returnType, Expr body) {
