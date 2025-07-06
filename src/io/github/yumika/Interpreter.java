@@ -1179,6 +1179,33 @@ public class Interpreter implements
     return builder.toString();
   }
 
+  // @TODO: use this instead of visitInterpolatedString
+  @Override
+  public Object visitTemplateLiteralExpr(Expr.TemplateLiteral expr) {
+    StringBuilder builder = new StringBuilder();
+
+    for (Expr.TemplateLiteral.Part part : expr.parts) {
+      if (part instanceof Expr.TemplateLiteral.Text text) {
+        builder.append(text.value);
+      } else if (part instanceof Expr.TemplateLiteral.Expression interpolation) {
+        Object value = evaluate(interpolation.expression);
+
+        // Handle __fmt__ if present
+        if (value instanceof YmkInstance instance && instance.containsField("__fmt__")) {
+          Object fmt = instance.get(new Token(TokenType.IDENTIFIER, "__fmt__", null, 0), this);
+          if (fmt instanceof YmkCallable fn) {
+            value = fn.call(this, List.of(), Map.of());
+          }
+        }
+
+        builder.append(value != null ? value.toString() : "null");
+      }
+    }
+
+    return builder.toString();
+  }
+
+
   @Override
   public Object visitLambdaExpr(Expr.Lambda expr) {
     Object thisContext = null;
