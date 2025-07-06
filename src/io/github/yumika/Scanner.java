@@ -282,7 +282,7 @@ class Scanner {
     addToken(TEMPLATE_STRING, parts);
   }
 
-  // TODO: refactor templateString to ->
+  // TODO: refactor templateString to -> scanTemplateLiteral
   private void scanTemplateLiteral() {
     // Add opening backtick token
     addToken(TokenType.BACKTICK);
