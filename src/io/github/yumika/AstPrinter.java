@@ -213,6 +213,8 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
   public String visitInterpolatedStringExpr(Expr.InterpolatedString expr) {
     return parenthesize2("template-string", expr.parts);
   }
+
+  // @TODO: refactor ASTPrinter
   @Override
   public String visitLambdaExpr(Expr.Lambda expr) {
     return parenthesize2("lambda", expr.body, expr.params);
@@ -287,6 +289,11 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
 
   @Override
   public String visitSuperExpr(Expr.Super expr) { return parenthesize2("super", expr.method); }
+
+  @Override
+  public String visitTemplateLiteralExpr(Expr.TemplateLiteral expr) {
+    return parenthesize2("template-literal", expr.parts);
+  }
 
   @Override
   public String visitThisExpr(Expr.This expr) { return "this"; }
