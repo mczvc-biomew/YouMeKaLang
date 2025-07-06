@@ -415,6 +415,18 @@ class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
     return null;
   }
 
+  // @TODO: refactor
+  @Override
+  public Void visitTemplateLiteralExpr(Expr.TemplateLiteral expr) {
+    for (Expr.TemplateLiteral.Part part : expr.parts) {
+      if (part instanceof Expr.TemplateLiteral.Expression embedded) {
+        resolve(embedded.expression); // Resolve each interpolated expression
+      }
+    }
+    return null;
+  }
+
+
   @Override
   public Void visitLambdaExpr(Expr.Lambda expr) {
     FunctionType enclosingFunction = currentFunction;
