@@ -282,6 +282,46 @@ class Scanner {
     addToken(TEMPLATE_STRING, parts);
   }
 
+  // TODO: refactor templateString to ->
+  private void scanTemplateLiteral() {
+    // Add opening backtick token
+    addToken(TokenType.BACKTICK);
+
+    StringBuilder buffer = new StringBuilder();
+
+    while (!isAtEnd()) {
+      char c = advance();
+
+      if (c == '`') {
+        // Flush buffer if there's text left
+        if (buffer.length() > 0) {
+          addToken(TokenType.TEMPLATE_STRING_TEXT, buffer.toString());
+          buffer.setLength(0);
+        }
+
+        addToken(TokenType.BACKTICK); // closing backtick
+        return;
+      }
+
+      if (c == '$' && match('{')) {
+        // Flush raw string before expression
+        if (buffer.length() > 0) {
+          addToken(TokenType.TEMPLATE_STRING_TEXT, buffer.toString());
+          buffer.setLength(0);
+        }
+
+        addToken(TokenType.TEMPLATE_EXPR_START); // ${
+        return; // exit so parser can handle interpolation
+      }
+
+      buffer.append(c);
+    }
+
+    // Unterminated template string
+    throw error(peek(), "Unterminated template literal.");
+  }
+
+
   private boolean match(char expected) {
     if (isAtEnd()) return false;
     if (source.charAt(current) != expected) return false;
