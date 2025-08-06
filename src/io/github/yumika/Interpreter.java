@@ -378,7 +378,7 @@ public class Interpreter implements
 
       } else if (object instanceof YmkInstance) {
         try {
-          value = ((YmkInstance) object).get(new Token(TokenType.IDENTIFIER, key, null, 0),
+          value = ((YmkInstance) object).get(new Token(TokenType.IDENTIFIER, key, null, 0, 0),
               this);
         } catch (RuntimeError re) {
           value = null;
@@ -1192,7 +1192,7 @@ public class Interpreter implements
 
         // Handle __fmt__ if present
         if (value instanceof YmkInstance instance && instance.containsField("__fmt__")) {
-          Object fmt = instance.get(new Token(TokenType.IDENTIFIER, "__fmt__", null, 0), this);
+          Object fmt = instance.get(new Token(TokenType.IDENTIFIER, "__fmt__", null, 0, 0), this);
           if (fmt instanceof YmkCallable fn) {
             value = fn.call(this, List.of(), Map.of());
           }
@@ -1314,7 +1314,7 @@ public class Interpreter implements
             value = map.get(key);
           } else if (target instanceof YmkInstance inst) {
             try {
-              value = inst.get(new Token(TokenType.IDENTIFIER, key, null, 0), this);
+              value = inst.get(new Token(TokenType.IDENTIFIER, key, null, 0, 0), this);
             } catch (RuntimeError e) {
               return false;
             }
