@@ -267,14 +267,13 @@ abstract class Expr {
     final List<Expr> parts;
   }
 
-  // @TODO: refactor InterpolatedString
   static class TemplateLiteral extends Expr {
 
     TemplateLiteral(List<Part> parts) {
       this.parts = parts;
     }
 
-    static interface Part {}
+    interface Part {}
 
     static class Text implements Part {
       final String value;
