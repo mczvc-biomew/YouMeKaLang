@@ -26,8 +26,8 @@ public class YmkMath extends YmkInstance {
   }
 
   private void defineConstants(Interpreter interpreter) {
-    this.set(new Token(TokenType.IDENTIFIER, "PI", null, 0), Math.PI, interpreter);
-    this.set(new Token(TokenType.IDENTIFIER, "E", null, 0), Math.E, interpreter);
+    this.set(new Token(TokenType.IDENTIFIER, "PI", null, 0, 0), Math.PI, interpreter);
+    this.set(new Token(TokenType.IDENTIFIER, "E", null, 0, 0), Math.E, interpreter);
 
     defineFunction("sqrt", 1, (_interpreter, args) -> Math.sqrt(toDouble(args, 0)), interpreter);
     defineFunction("pow", 2, (_interpreter, args) -> Math.pow(toDouble(args, 0), toDouble(args, 1)), interpreter);
@@ -41,7 +41,7 @@ public class YmkMath extends YmkInstance {
   }
 
   private Token id(String name) {
-    return new Token(TokenType.IDENTIFIER, name, null, 0);
+    return new Token(TokenType.IDENTIFIER, name, null, 0, 0);
   }
 
 }
