@@ -57,7 +57,7 @@ public class YmkInstance {
 
   Object getOverload(String methodName, Interpreter interpreter) {
     try {
-      return get(new Token(TokenType.IDENTIFIER, methodName, null, 0), interpreter);
+      return get(new Token(TokenType.IDENTIFIER, methodName, null, 0, 0), interpreter);
     } catch (RuntimeError e) {
       return null;
     }
