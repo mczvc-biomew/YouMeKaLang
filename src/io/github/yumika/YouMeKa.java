@@ -98,18 +98,18 @@ public class YouMeKa {
 
   }
 
-  static void error(int line, String message) { report(line, "", message); }
+  static void error(int line, int column, String message) { report(line, column, "", message); }
 
-  private static void report(int line, String where, String message) {
-    System.err.println("[line " + line + "] Error" + where + ": " + message);
+  private static void report(int line, int column, String where, String message) {
+    System.err.println("[line " + line + ", column " + column + "] Error" + where + ": " + message);
     hadError = true;
   }
 
   static void error(Token token, String message) {
     if (token.type == TokenType.EOF) {
-      report(token.line, " at end", message);
+      report(token.line, token.column, " at end", message);
     } else {
-      report(token.line, " at '" + token.lexeme + "'", message);
+      report(token.line, token.column, " at '" + token.lexeme + "'", message);
     }
   }
 
