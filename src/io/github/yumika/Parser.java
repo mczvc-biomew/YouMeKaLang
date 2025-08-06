@@ -253,7 +253,7 @@ class Parser {
       Token next = consume(IDENTIFIER,
           "Expect identifier after '.'.");
       pathParts.add(next);
-      path = new Token(IDENTIFIER, path.lexeme + "." + next.lexeme, null, path.line);
+      path = new Token(IDENTIFIER, path.lexeme + "." + next.lexeme, null, path.line, path.column);
     }
 
     if (match(AS)) {
@@ -703,14 +703,6 @@ class Parser {
       return new Expr.Literal(previous().literal);
     }
 
-    // TODO: here, implement
-    /*
-    // For template strings
-    BACKTICK,              // ` (start and end of template)
-    TEMPLATE_STRING_TEXT,  // raw string between expressions
-    TEMPLATE_EXPR_START,   // ${
-
-     */
     if (match(TEMPLATE_STRING)) {
       List<Object> parts = (List<Object>) previous().literal;
       List<Expr> expressions = new ArrayList<>();
@@ -740,13 +732,13 @@ class Parser {
     }
 
     if (check(PRINT) && isInExpressionContext()) {
-      Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "print", null, peek().line);
+      Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "print", null, peek().line, peek().column);
       advance(); // consume 'print'
       return new Expr.Variable(fakeIdentifier);
     }
 
     if (check(PUTS) && isInExpressionContext()) {
-      Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "puts", null, peek().line);
+      Token fakeIdentifier = new Token(TokenType.IDENTIFIER, "puts", null, peek().line, peek().column);
       advance(); // consume 'puts'
       return new Expr.Variable(fakeIdentifier);
     }
@@ -782,30 +774,6 @@ class Parser {
     }
 
     throw error(peek(), "Expect expression.");
-  }
-
-  // TODO: here, implement:
-//  if (match(TokenType.BACKTICK)) {
-//    return parseTemplateLiteral();
-//  }
-
-  private Expr parseTemplateLiteral() {
-    List<Expr.TemplateLiteral.Part> parts = new ArrayList<>();
-
-    while (!check(TokenType.BACKTICK) && !isAtEnd()) {
-      if (match(TokenType.TEMPLATE_STRING_TEXT)) {
-        parts.add(new Expr.TemplateLiteral.Text(previous().literal.toString()));
-      } else if (match(TokenType.TEMPLATE_EXPR_START)) {
-        Expr expr = expression(); // recurse into standard expression
-        consume(TokenType.RIGHT_BRACE, "Expect '}' after interpolation.");
-        parts.add(new Expr.TemplateLiteral.Expression(expr));
-      } else {
-        throw error(peek(), "Unexpected token in template literal.");
-      }
-    }
-
-    consume(TokenType.BACKTICK, "Expect closing backtick (`) to end template.");
-    return new Expr.TemplateLiteral(parts);
   }
 
 
@@ -1199,6 +1167,37 @@ class Parser {
     }
     consume(RIGHT_BRACE, "Expect '}' after object literal.");
     return new Expr.ObjectLiteral(properties);
+  }
+
+  // TODO: here, implement:
+//  if (match(TokenType.BACKTICK)) {
+//    return parseTemplateLiteral();
+//  }
+
+  // TODO: here, implement
+//  For template strings
+//  BACKTICK,              // ` (start and end of template)
+//  TEMPLATE_STRING_TEXT,  // raw string between expressions
+//  TEMPLATE_EXPR_START,   // ${
+//
+  private Expr parseTemplateLiteral() {
+    List<Object> literals = (List<Object>) previous().literal;
+    List<Expr> parts = new ArrayList<>();
+
+    for (Object literal : literals) {
+      if (literal instanceof String str) {
+        parts.add(new Expr.Literal(str));
+      } else if (literal instanceof Token token) {
+        Expr expr = expression(); // recurse into standard expression
+//        consume(TokenType.RIGHT_BRACE, "Expect '}' after interpolation.");
+        parts.add(expr);
+      } else {
+        throw error(peek(), "Unexpected token in template literal.");
+      }
+    }
+
+//    consume(TokenType.BACKTICK, "Expect closing backtick (`) to end template.");
+    return new Expr.InterpolatedString(parts);
   }
 
   private Expr parseTemplateExpr(Token token) {
