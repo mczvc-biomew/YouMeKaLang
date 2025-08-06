@@ -55,6 +55,7 @@ class Scanner {
   private int start = 0;
   private int current = 0;
   private int line = 1;
+  private int column = 0;
 
   Scanner(String source) { this.source = source;}
 
@@ -64,7 +65,7 @@ class Scanner {
       scanToken();
     }
 
-    tokens.add(new Token(EOF, "", null, line));
+    tokens.add(new Token(EOF, "", null, line, column));
     return tokens;
   }
 
@@ -153,6 +154,7 @@ class Scanner {
 
       case '\n':
         line++;
+        column = 0;
         break;
       // < whitespace
 
@@ -173,7 +175,7 @@ class Scanner {
         } else if (isAlpha(c)) {
           identifier();
         } else {
-          YouMeKa.error(line, "Unexpected character.");
+          YouMeKa.error(line, column, "Unexpected character.");
         }
         // < digit-start
         break;
@@ -231,7 +233,7 @@ class Scanner {
     }
 
     if (isAtEnd()) {
-      YouMeKa.error(line, "Unterminated string.");
+      YouMeKa.error(line, column, "Unterminated string.");
       return;
     }
 
@@ -244,13 +246,21 @@ class Scanner {
 
   private void templateString() {
     int start = current;
+    int columnStart = column;
     StringBuilder builder = new StringBuilder();
     List<Object> parts = new ArrayList<>();
 
     while (!isAtEnd()) {
       if (peek() == '`') {
+        addToken(TEMPLATE_STRING, parts);
         advance();
-        break;
+
+        if (builder.length() > 0) {
+          parts.add(builder.toString());
+          builder.setLength(0);
+        }
+
+        return;
       }
 
       if (peek() == '$' && peekNext() == '{') {
@@ -269,57 +279,55 @@ class Scanner {
         }
 
         String expr = source.substring(exprStart, current - 1);
-        parts.add(new Token(TEMPLATE_STRING, expr, null, line));
+        parts.add(new Token(TEMPLATE_STRING, expr, null, line, column));
       } else {
         builder.append(advance());
       }
     }
 
-    if (builder.length() > 0) {
-      parts.add(builder.toString());
-    }
-
-    addToken(TEMPLATE_STRING, parts);
+    // @TODO: fix columnStart
+    YouMeKa.error(new Token(BACKTICK, "`", '`', line, columnStart),
+        "Unterminated template literal.");
   }
 
   // TODO: refactor templateString to -> scanTemplateLiteral
-  private void scanTemplateLiteral() {
-    // Add opening backtick token
-    addToken(TokenType.BACKTICK);
-
-    StringBuilder buffer = new StringBuilder();
-
-    while (!isAtEnd()) {
-      char c = advance();
-
-      if (c == '`') {
-        // Flush buffer if there's text left
-        if (buffer.length() > 0) {
-          addToken(TokenType.TEMPLATE_STRING_TEXT, buffer.toString());
-          buffer.setLength(0);
-        }
-
-        addToken(TokenType.BACKTICK); // closing backtick
-        return;
-      }
-
-      if (c == '$' && match('{')) {
-        // Flush raw string before expression
-        if (buffer.length() > 0) {
-          addToken(TokenType.TEMPLATE_STRING_TEXT, buffer.toString());
-          buffer.setLength(0);
-        }
-
-        addToken(TokenType.TEMPLATE_EXPR_START); // ${
-        return; // exit so parser can handle interpolation
-      }
-
-      buffer.append(c);
-    }
-
-    // Unterminated template string
-    throw error(peek(), "Unterminated template literal.");
-  }
+//  private void scanTemplateLiteral() {
+//    // Add opening backtick token
+//    addToken(TokenType.BACKTICK);
+//
+//    StringBuilder buffer = new StringBuilder();
+//
+//    while (!isAtEnd()) {
+//      char c = advance();
+//
+//      if (c == '`') {
+//        // Flush buffer if there's text left
+//        if (buffer.length() > 0) {
+//          addToken(TokenType.TEMPLATE_STRING_TEXT, buffer.toString());
+//          buffer.setLength(0);
+//        }
+//
+//        addToken(TokenType.BACKTICK); // closing backtick
+//        return;
+//      }
+//
+//      if (c == '$' && match('{')) {
+//        // Flush raw string before expression
+//        if (buffer.length() > 0) {
+//          addToken(TokenType.TEMPLATE_STRING_TEXT, buffer.toString());
+//          buffer.setLength(0);
+//        }
+//
+//        addToken(TokenType.TEMPLATE_EXPR_START); // ${
+//        return; // exit so parser can handle interpolation
+//      }
+//
+//      buffer.append(c);
+//    }
+//
+//    // Unterminated template string
+//    throw error(peek(), "Unterminated template literal.");
+//  }
 
 
   private boolean match(char expected) {
@@ -357,12 +365,17 @@ class Scanner {
     return source.charAt(current - 1);
   }
 
-  private char advance() { return source.charAt(current++);}
+  private char advance() {
+    if (source.charAt(current) == '\n')
+      column = 0;
+    column++;
+    return source.charAt(current++);
+  }
 
   private void addToken(TokenType type) { addToken(type, null); }
 
   private void addToken(TokenType type, Object literal) {
     String text = source.substring(start, current);
-    tokens.add(new Token(type, text, literal, line));
+    tokens.add(new Token(type, text, literal, line, column));
   }
 }
