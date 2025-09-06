@@ -413,7 +413,7 @@ class Parser {
     }
 
     if (decorated && !match(FUN)) {
-      error(peek(), "Expect 'fun'.");
+      throw error(peek(), "Expect 'fun'.");
     }
 
     Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
@@ -431,7 +431,7 @@ class Parser {
     if (!check(RIGHT_PAREN)) {
       do {
         if (parameters.size() >= 255) {
-          error(peek(), "Maximum of 255 parameters.");
+          throw error(peek(), "Maximum of 255 parameters.");
         }
 
         if (match(STAR_STAR)) {
@@ -509,11 +509,10 @@ class Parser {
         Token name = ((Expr.Variable)array).name;
         Expr index = ((Expr.ArrayIndex)expr).index;
         return new Expr.ArrayAssign(name, array, index, value);
-      } else if (expr instanceof Expr.Get) {
-        Expr.Get get = (Expr.Get)expr;
+      } else if (expr instanceof Expr.Get get) {
         return new Expr.Set(get.object, get.name, value);
       }
-      error(operator, "Invalid assignment target.");
+      throw error(operator, "Invalid assignment target.");
     }
     return expr;
   }
@@ -642,7 +641,7 @@ class Parser {
     if (!check(RIGHT_PAREN)) {
       do {
         if (arguments.size() >= 255) {
-          error(peek(), "Maximum of 255 arguments.");
+          throw error(peek(), "Maximum of 255 arguments.");
         }
         if (check(IDENTIFIER) && peekNext().type == COLON) {
           Token key = consume(IDENTIFIER, "Expect keyword argument.");
@@ -704,17 +703,7 @@ class Parser {
     }
 
     if (match(TEMPLATE_STRING)) {
-      List<Object> parts = (List<Object>) previous().literal;
-      List<Expr> expressions = new ArrayList<>();
-
-      for (Object part : parts) {
-        if (part instanceof String str) {
-          expressions.add(new Expr.Literal(str));
-        } else if (part instanceof Token token) {
-          expressions.add(parseTemplateExpr(token));
-        }
-      }
-      return new Expr.InterpolatedString(expressions);
+      return parseTemplateString();
     }
 
     if (match(SUPER)) {
@@ -915,7 +904,7 @@ class Parser {
       if (!check(PIPE)) {
         do {
           if (parameters.size() >= 255) {
-            error(peek(), "Maximum of 255 parameters.");
+            throw error(peek(), "Maximum of 255 parameters.");
           }
           parameters.add(consume(IDENTIFIER, "Expect parameter name."));
 
@@ -1169,35 +1158,21 @@ class Parser {
     return new Expr.ObjectLiteral(properties);
   }
 
-  // TODO: here, implement:
-//  if (match(TokenType.BACKTICK)) {
-//    return parseTemplateLiteral();
-//  }
+  private Expr parseTemplateString() {
+    List<Object> parts = (List<Object>) previous().literal;
+    List<Expr> expressions = new ArrayList<>();
 
-  // TODO: here, implement
-//  For template strings
-//  BACKTICK,              // ` (start and end of template)
-//  TEMPLATE_STRING_TEXT,  // raw string between expressions
-//  TEMPLATE_EXPR_START,   // ${
-//
-  private Expr parseTemplateLiteral() {
-    List<Object> literals = (List<Object>) previous().literal;
-    List<Expr> parts = new ArrayList<>();
-
-    for (Object literal : literals) {
-      if (literal instanceof String str) {
-        parts.add(new Expr.Literal(str));
-      } else if (literal instanceof Token token) {
-        Expr expr = expression(); // recurse into standard expression
-//        consume(TokenType.RIGHT_BRACE, "Expect '}' after interpolation.");
-        parts.add(expr);
+    for (Object part : parts) {
+      if (part instanceof String str) {
+        expressions.add(new Expr.Literal(str));
+      } else if (part instanceof Token token) {
+        expressions.add(parseTemplateExpr(token));
       } else {
         throw error(peek(), "Unexpected token in template literal.");
       }
     }
 
-//    consume(TokenType.BACKTICK, "Expect closing backtick (`) to end template.");
-    return new Expr.InterpolatedString(parts);
+    return new Expr.InterpolatedString(expressions);
   }
 
   private Expr parseTemplateExpr(Token token) {
